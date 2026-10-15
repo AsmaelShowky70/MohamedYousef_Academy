@@ -9,6 +9,10 @@ $db = getDB();
 $user = getCurrentUser();
 
 if ($action === 'years') {
+    $cached = getAppCache('api_years_count_list', 300);
+    if ($cached !== null && is_array($cached)) {
+        jsonResponse(['success' => true, 'years' => $cached]);
+    }
     $stmt = $db->query("
         SELECT y.*, 
                (SELECT COUNT(*) FROM Course c JOIN Section s ON c.sectionId = s.id WHERE s.yearId = y.id) as coursesCount
@@ -16,6 +20,7 @@ if ($action === 'years') {
         ORDER BY y.order ASC, y.name ASC
     ");
     $years = $stmt->fetchAll();
+    setAppCache('api_years_count_list', $years, 300);
     jsonResponse(['success' => true, 'years' => $years]);
 }
 

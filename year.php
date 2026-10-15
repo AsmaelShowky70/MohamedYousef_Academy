@@ -8,10 +8,20 @@ if (!$yearId) {
 require_once __DIR__ . '/includes/header.php';
 $db = getDB();
 
-// Fetch Year
-$stmt = $db->prepare("SELECT * FROM Year WHERE id = ? LIMIT 1");
-$stmt->execute([$yearId]);
-$year = $stmt->fetch();
+// Fetch Year (Optimized via Cache)
+$cachedYears = getCachedYears($db);
+$year = null;
+foreach ($cachedYears as $y) {
+    if ((string)$y['id'] === (string)$yearId) {
+        $year = $y;
+        break;
+    }
+}
+if (!$year) {
+    $stmt = $db->prepare("SELECT * FROM Year WHERE id = ? LIMIT 1");
+    $stmt->execute([$yearId]);
+    $year = $stmt->fetch();
+}
 
 if (!$year) {
     echo '<div class="min-h-screen flex items-center justify-center text-center p-6"><h1 class="text-3xl font-bold text-slate-800">المرحلة الدراسية غير موجودة</h1></div>';
