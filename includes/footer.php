@@ -47,6 +47,14 @@ $whatsappEnabled = getSetting('whatsappFloatingEnabled', 'true') === 'true';
                 <a href="/contact-us.php" class="inline-block w-fit rounded-xl bg-[#5e6e85] px-6 py-2.5 text-center text-xs font-bold text-white shadow-md transition-all hover:bg-[#4f5d72]">
                     الدعم الفني
                 </a>
+                <a class="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-center text-xs font-bold text-white shadow-md transition-all mt-1 hover:brightness-110 active:scale-95" 
+                   style="background-color: #25D366 !important; color: #ffffff !important; text-decoration: none !important;" 
+                   href="https://wa.me/<?= preg_replace('/[^0-9]/', '', $whatsappNumber) ?>" 
+                   target="_blank" 
+                   rel="noopener noreferrer">
+                    <i class="fa-brands fa-whatsapp text-base" style="color: #ffffff !important;"></i>
+                    <span style="color: #ffffff !important; font-weight: 800; font-size: 13px;">01092037257</span>
+                </a>
                 <a href="/parent.php" class="text-xs font-bold text-[#0f766e] hover:underline pt-2">
                     <i class="fa-solid fa-user-shield ml-1"></i> مساحة ولي الأمر
                 </a>
@@ -56,13 +64,66 @@ $whatsappEnabled = getSetting('whatsappFloatingEnabled', 'true') === 'true';
     </div>
 </footer>
 
-<!-- Floating WhatsApp Button -->
+<!-- Floating WhatsApp Button & Dedicated Styling -->
+<style>
+.wa-float-btn {
+    position: fixed !important;
+    bottom: 24px !important;
+    right: 24px !important;
+    z-index: 99999 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 60px !important;
+    height: 60px !important;
+    background-color: #25D366 !important;
+    color: #ffffff !important;
+    border-radius: 50% !important;
+    box-shadow: 0 4px 20px rgba(37, 211, 102, 0.55), 0 2px 8px rgba(0, 0, 0, 0.2) !important;
+    text-decoration: none !important;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+    cursor: pointer !important;
+}
+.wa-float-btn:hover {
+    background-color: #128C7E !important;
+    color: #ffffff !important;
+    transform: scale(1.12) !important;
+    box-shadow: 0 8px 28px rgba(37, 211, 102, 0.7), 0 4px 12px rgba(0, 0, 0, 0.25) !important;
+}
+.wa-float-btn i, .wa-float-btn svg {
+    font-size: 32px !important;
+    width: 32px !important;
+    height: 32px !important;
+    color: #ffffff !important;
+    fill: #ffffff !important;
+}
+.wa-ripple {
+    position: absolute !important;
+    top: -5px !important;
+    left: -5px !important;
+    right: -5px !important;
+    bottom: -5px !important;
+    border-radius: 50% !important;
+    border: 2px solid #25D366 !important;
+    animation: wa-ripple-anim 1.8s infinite cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
+    pointer-events: none !important;
+}
+@keyframes wa-ripple-anim {
+    0% { transform: scale(0.95); opacity: 0.9; }
+    50% { transform: scale(1.22); opacity: 0.3; }
+    100% { transform: scale(1.4); opacity: 0; }
+}
+</style>
+
 <?php if ($whatsappEnabled && !empty($whatsappNumber)): ?>
 <a href="https://wa.me/<?= preg_replace('/[^0-9]/', '', $whatsappNumber) ?>?text=<?= urlencode('السلام عليكم، استفسار بخصوص منصة أ. محمد يوسف') ?>" 
    target="_blank" 
-   class="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg transition-all duration-300 hover:scale-110 hover:shadow-xl hover:bg-emerald-600 group"
-   title="تواصل معنا عبر واتساب">
-    <i class="fa-brands fa-whatsapp text-3xl"></i>
+   rel="noopener noreferrer"
+   class="wa-float-btn" 
+   title="تواصل معنا عبر واتساب"
+   aria-label="واتساب">
+    <span class="wa-ripple"></span>
+    <i class="fa-brands fa-whatsapp"></i>
 </a>
 <?php endif; ?>
 
