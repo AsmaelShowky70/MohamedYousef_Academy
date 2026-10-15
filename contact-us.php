@@ -13,7 +13,7 @@ else $displayPhone = $cleanVfc;
     
     <div class="mx-auto max-w-6xl">
         <div class="text-center mb-16">
-            <h1 class="text-4xl font-black sm:text-5xl tracking-tight bg-gradient-to-r from-[#0f766e] to-[#0d3753] bg-clip-text text-transparent mb-4">
+            <h1 class="text-4xl font-black sm:text-5xl tracking-tight mb-4" style="background: linear-gradient(135deg, #0f766e 0%, #0d3753 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
                 الدعم الفني والتواصل
             </h1>
             <p class="mx-auto max-w-2xl text-base md:text-lg text-slate-600 leading-relaxed font-medium">

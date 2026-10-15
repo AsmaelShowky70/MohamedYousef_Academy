@@ -14,7 +14,7 @@ require_once __DIR__ . '/includes/header.php';
                 <i class="fa-solid fa-sparkles"></i>
                 <span>تعرّف علينا</span>
             </span>
-            <h1 class="text-4xl font-black sm:text-5xl tracking-tight bg-gradient-to-r from-[#0f766e] to-[#0d3753] bg-clip-text text-transparent mb-4 leading-tight">
+            <h1 class="text-4xl font-black sm:text-5xl tracking-tight mb-4 leading-tight" style="background: linear-gradient(135deg, #0f766e 0%, #0d3753 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
                 منصة الأستاذ محمد يوسف
             </h1>
             <p class="mx-auto max-w-2xl text-base md:text-lg text-slate-600 leading-relaxed font-medium">
@@ -116,7 +116,7 @@ require_once __DIR__ . '/includes/header.php';
         </div>
 
         <!-- CTA Call to Action -->
-        <div class="rounded-3xl bg-gradient-to-r from-[#0f766e] to-[#0d3753] p-8 md:p-12 text-center text-white relative overflow-hidden shadow-2xl">
+        <div class="rounded-3xl p-8 md:p-12 text-center text-white relative overflow-hidden shadow-2xl" style="background: linear-gradient(135deg, #0f766e 0%, #0d3753 100%) !important;">
             <div class="absolute -top-12 -right-12 h-40 w-40 rounded-full bg-white/10 blur-xl"></div>
             <div class="absolute -bottom-12 -left-12 h-40 w-40 rounded-full bg-white/10 blur-xl"></div>
             <h3 class="text-2xl md:text-3xl font-black mb-4 leading-tight">هل أنت مستعد لبدء رحلتك في التفوق؟</h3>

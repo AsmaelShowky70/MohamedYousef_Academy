@@ -97,7 +97,7 @@ foreach ($courses as $c) {
 
 <div class="min-h-screen bg-slate-50/60 pb-32">
     <!-- Hero / Stage Banner -->
-    <div class="relative overflow-hidden bg-gradient-to-b from-[#0d3753] to-[#0f766e] text-white pt-28 pb-16 px-4">
+    <div class="relative overflow-hidden text-white pt-24 sm:pt-28 pb-14 sm:pb-16 px-4 shadow-md" style="background: linear-gradient(135deg, #0d3753 0%, #0f766e 100%) !important;">
         <div class="max-w-6xl mx-auto text-center relative z-10">
             <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-white/10 text-emerald-200 mb-4 backdrop-blur-sm border border-white/10">
                 <i class="fa-solid fa-graduation-cap"></i> المرحلة الدراسية
