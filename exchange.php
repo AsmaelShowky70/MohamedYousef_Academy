@@ -100,7 +100,7 @@ require_once __DIR__ . '/includes/header.php';
                 <div class="group border-r-2 border-[#0f766e]/35 hover:border-[#0f766e] pr-6 py-1 transition duration-200">
                     <h2 class="text-lg md:text-xl font-black text-slate-900 mb-2">5. كيف تقدم طلب استبدال كورس؟</h2>
                     <p class="text-xs md:text-sm text-slate-600 leading-relaxed font-medium">
-                        لتقديم طلب استبدال كورس، يرجى إرسال رسالة إلى البريد الإلكتروني للدعم <span class="font-mono text-[#0f766e] font-bold">i.aboelsoud21@gmail.com</span> تحتوي على البيانات التالية:
+                        لتقديم طلب استبدال كورس، يرجى إرسال رسالة إلى البريد الإلكتروني للدعم <span class="font-mono text-[#0f766e] font-bold">arabicmohammed407@gmail.com</span> تحتوي على البيانات التالية:
                     </p>
                     <ul class="list-disc list-inside mt-3 space-y-1.5 text-slate-600 text-xs md:text-sm font-medium pr-2">
                         <li>اسمك بالكامل المسجل على المنصة</li>

@@ -67,8 +67,8 @@ else $displayPhone = $cleanVfc;
                 <div>
                     <h4 class="font-black text-base md:text-lg text-slate-900 mb-1">البريد الإلكتروني</h4>
                     <p class="text-xs text-slate-500 mb-2">للاستفسارات العامة أو الاقتراحات ومشاكل الدفع</p>
-                    <a href="mailto:i.aboelsoud21@gmail.com" class="text-[#0f766e] hover:underline font-bold text-xs md:text-sm transition">
-                        i.aboelsoud21@gmail.com
+                    <a href="mailto:arabicmohammed407@gmail.com" class="text-[#0f766e] hover:underline font-bold text-xs md:text-sm transition">
+                        arabicmohammed407@gmail.com
                     </a>
                 </div>
             </div>

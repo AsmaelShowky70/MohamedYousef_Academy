@@ -149,7 +149,7 @@ require_once __DIR__ . '/includes/header.php';
                     <p class="text-xs text-slate-500 mb-4 font-medium">إذا كان لديك أي استفسار أو مخاوف بشأن خصوصية بياناتك، يمكنك مراسلتنا فوراً:</p>
                     <div class="flex items-center gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-200/80 w-fit">
                         <i class="fa-solid fa-envelope text-[#0f766e]"></i>
-                        <a href="mailto:i.aboelsoud21@gmail.com" class="text-sm font-bold text-slate-900 hover:text-[#0f766e] transition font-mono">i.aboelsoud21@gmail.com</a>
+                        <a href="mailto:arabicmohammed407@gmail.com" class="text-sm font-bold text-slate-900 hover:text-[#0f766e] transition font-mono">arabicmohammed407@gmail.com</a>
                     </div>
                 </div>
             </div>
