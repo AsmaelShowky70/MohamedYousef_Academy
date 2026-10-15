@@ -191,14 +191,14 @@ if (!function_exists('parseVideoSource')) {
     function parseVideoSource($link, $videoId = '') {
         $link = trim((string)$link);
 
-        // 1. YouTube (Supports watch URLs, youtu.be, embed, shorts, live, and raw 11-char IDs)
-        if (preg_match('#(?:youtu\.be/|youtube\.com/(?:embed/|v/|watch\?v=|watch\?.+&v=|shorts/|live/))([\w-]{11})#i', $link, $m) ||
+        // 1. YouTube (Supports watch URLs, youtu.be, embed, shorts, live, unlisted, and raw 11-char IDs)
+        if (preg_match('#(?:youtu\.be/|youtube(?:-nocookie)?\.com/(?:embed/|v/|watch\?v=|watch\?.+&v=|shorts/|live/))([\w-]{11})#i', $link, $m) ||
             (preg_match('#^[\w-]{11}$#', $link) && !preg_match('#\.mp4$#i', $link))) {
             $ytId = isset($m[1]) ? $m[1] : $link;
             return [
                 'type' => 'youtube',
                 'id' => $ytId,
-                'embedUrl' => 'https://www.youtube.com/embed/' . $ytId . '?rel=0&modestbranding=1&enablejsapi=1&playsinline=1&controls=1&iv_load_policy=3'
+                'embedUrl' => 'https://www.youtube-nocookie.com/embed/' . $ytId . '?autoplay=0&rel=0&modestbranding=1&enablejsapi=1&playsinline=1&controls=1&iv_load_policy=3&fs=1'
             ];
         }
 

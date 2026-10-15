@@ -74,7 +74,7 @@ if (!empty($user['yearId'])) {
     $userYearName = $yStmt->fetchColumn() ?: 'لم يتم التحديد';
 }
 
-$years = $db->query("SELECT id, name FROM Year ORDER BY `order` ASC")->fetchAll();
+$years = getCachedYears($db);
 
 // Fetch Connected Devices
 $stmtDev = $db->prepare("SELECT * FROM Device WHERE userId = ? ORDER BY lastActiveAt DESC");

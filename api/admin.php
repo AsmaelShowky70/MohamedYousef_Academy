@@ -133,6 +133,7 @@ if ($action === 'update-settings') {
     foreach ($settings as $k => $v) {
         $stmt->execute([$k, (string)$v]);
     }
+    clearAppCache('app_settings');
     jsonResponse(['success' => true, 'message' => 'تم حفظ الإعدادات بنجاح']);
 }
 

@@ -177,9 +177,66 @@ function requireSuperAdmin() {
     return $user;
 }
 
+// ========================================================
+// High-Concurrency Query & Object Caching (LiteSpeed / Hostinger Optimization)
+// Dramatically reduces MySQL connection pool & CPU usage with zero UI impact
+// ========================================================
+
+function getAppCache($key, $ttl = 300) {
+    $dir = __DIR__ . '/cache';
+    if (!is_dir($dir)) return null;
+    $file = $dir . '/' . md5($key) . '.cache.php';
+    if (!file_exists($file)) return null;
+    $content = @file_get_contents($file);
+    if (!$content) return null;
+    $data = @unserialize($content);
+    if (!$data || !isset($data['exp']) || $data['exp'] < time()) {
+        @unlink($file);
+        return null;
+    }
+    return $data['val'];
+}
+
+function setAppCache($key, $value, $ttl = 300) {
+    $dir = __DIR__ . '/cache';
+    if (!is_dir($dir)) {
+        @mkdir($dir, 0755, true);
+    }
+    $file = $dir . '/' . md5($key) . '.cache.php';
+    $data = [
+        'exp' => time() + $ttl,
+        'val' => $value
+    ];
+    @file_put_contents($file, serialize($data), LOCK_EX);
+}
+
+function clearAppCache($key = null) {
+    $dir = __DIR__ . '/cache';
+    if (!is_dir($dir)) return;
+    if ($key) {
+        $file = $dir . '/' . md5($key) . '.cache.php';
+        if (file_exists($file)) @unlink($file);
+    } else {
+        $files = glob($dir . '/*.cache.php');
+        if ($files) {
+            foreach ($files as $f) @unlink($f);
+        }
+    }
+}
+
 function getSettings() {
     static $settings = null;
-    if ($settings === null) {
+    if ($settings !== null) {
+        return $settings;
+    }
+
+    $cached = getAppCache('app_settings', 600);
+    if ($cached !== null && is_array($cached)) {
+        $settings = $cached;
+        return $settings;
+    }
+
+    try {
         $db = getDB();
         $stmt = $db->query("SELECT `key`, `value` FROM Setting");
         $rows = $stmt->fetchAll();
@@ -187,8 +244,34 @@ function getSettings() {
         foreach ($rows as $r) {
             $settings[$r['key']] = $r['value'];
         }
+        setAppCache('app_settings', $settings, 600);
+    } catch (Exception $e) {
+        $settings = [];
     }
     return $settings;
+}
+
+function getCachedYears($db = null) {
+    static $years = null;
+    if ($years !== null) {
+        return $years;
+    }
+
+    $cached = getAppCache('app_years', 600);
+    if ($cached !== null && is_array($cached)) {
+        $years = $cached;
+        return $years;
+    }
+
+    try {
+        if ($db === null) $db = getDB();
+        $stmt = $db->query("SELECT * FROM Year ORDER BY `order` ASC, createdAt ASC");
+        $years = $stmt->fetchAll();
+        setAppCache('app_years', $years, 600);
+    } catch (Exception $e) {
+        $years = [];
+    }
+    return $years;
 }
 
 function getSetting($key, $default = null) {
@@ -251,14 +334,14 @@ if (!function_exists('parseVideoSource')) {
     function parseVideoSource($link, $videoId = '') {
         $link = trim((string)$link);
 
-        // 1. YouTube (Supports watch URLs, youtu.be, embed, shorts, live, and raw 11-char IDs)
-        if (preg_match('#(?:youtu\.be/|youtube\.com/(?:embed/|v/|watch\?v=|watch\?.+&v=|shorts/|live/))([\w-]{11})#i', $link, $m) ||
+        // 1. YouTube (Supports watch URLs, youtu.be, embed, shorts, live, unlisted, and raw 11-char IDs)
+        if (preg_match('#(?:youtu\.be/|youtube(?:-nocookie)?\.com/(?:embed/|v/|watch\?v=|watch\?.+&v=|shorts/|live/))([\w-]{11})#i', $link, $m) ||
             (preg_match('#^[\w-]{11}$#', $link) && !preg_match('#\.mp4$#i', $link))) {
             $ytId = isset($m[1]) ? $m[1] : $link;
             return [
                 'type' => 'youtube',
                 'id' => $ytId,
-                'embedUrl' => 'https://www.youtube.com/embed/' . $ytId . '?rel=0&modestbranding=1&enablejsapi=1&playsinline=1&controls=1&iv_load_policy=3'
+                'embedUrl' => 'https://www.youtube-nocookie.com/embed/' . $ytId . '?autoplay=0&rel=0&modestbranding=1&enablejsapi=1&playsinline=1&controls=1&iv_load_policy=3&fs=1'
             ];
         }
 

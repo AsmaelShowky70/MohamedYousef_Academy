@@ -1,5 +1,6 @@
 # Database secrets & local environment
 config/db_config.php
+config/cache/
 .env
 *.env
 

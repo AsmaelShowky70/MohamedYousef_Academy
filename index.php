@@ -4,9 +4,8 @@ require_once __DIR__ . '/config/helpers.php';
 $currentUser = getCurrentUser();
 $db = getDB();
 
-// Fetch Educational Years
-$yearsStmt = $db->query("SELECT * FROM Year ORDER BY `order` ASC");
-$years = $yearsStmt->fetchAll();
+// Fetch Educational Years (from high-speed query cache)
+$years = getCachedYears($db);
 
 // Fetch Published Courses
 $coursesStmt = $db->query("

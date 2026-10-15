@@ -4,7 +4,7 @@ $activeNav = "register";
 require_once __DIR__ . '/includes/header.php';
 
 $db = getDB();
-$years = $db->query("SELECT id, name FROM Year ORDER BY `order` ASC")->fetchAll();
+$years = getCachedYears($db);
 ?>
 
 <div class="flex-1 flex items-center justify-center py-16 px-4 bg-slate-50">

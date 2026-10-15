@@ -3,9 +3,8 @@ $pageTitle = "جميع الكورسات - منصة الأستاذ محمد يو�
 require_once __DIR__ . '/includes/header.php';
 $db = getDB();
 
-// 1. Fetch available years for filter
-$yearsStmt = $db->query("SELECT id, name FROM Year ORDER BY `order` ASC, createdAt ASC");
-$years = $yearsStmt->fetchAll();
+// 1. Fetch available years for filter (from high-speed query cache)
+$years = getCachedYears($db);
 
 // 2. Query filters
 $search = trim($_GET['search'] ?? '');

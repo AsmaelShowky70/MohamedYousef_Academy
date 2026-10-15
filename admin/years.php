@@ -13,6 +13,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['yearI
     $delId = $_GET['yearId'];
     try {
         $db->prepare("DELETE FROM Year WHERE id = ?")->execute([$delId]);
+        clearAppCache('app_years');
         $_SESSION['year_msg'] = 'تم حذف المرحلة الدراسية بنجاح';
         $_SESSION['year_msg_type'] = 'success';
     } catch (Exception $e) {
@@ -58,6 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_year'])) {
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, NOW(), NOW())
         ");
         $ins->execute([$yId, $name, $image, $order, $nahwLink, $sarfLink, $balaghaLink, $adabLink]);
+        clearAppCache('app_years');
         $_SESSION['year_msg'] = 'تم إضافة المرحلة الدراسية بنجاح!';
         $_SESSION['year_msg_type'] = 'success';
     }
@@ -104,6 +106,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_year'])) {
             WHERE id = ?
         ");
         $upd->execute([$name, $image, $order, $nahwLink, $sarfLink, $balaghaLink, $adabLink, $yId]);
+        clearAppCache('app_years');
         $_SESSION['year_msg'] = 'تم تحديث بيانات المرحلة بنجاح!';
         $_SESSION['year_msg_type'] = 'success';
     }
