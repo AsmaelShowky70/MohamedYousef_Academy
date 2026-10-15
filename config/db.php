@@ -5,10 +5,20 @@
 // ========================================================
 
 // --------------------------------------------------------
-// [1] فحص ملف الإعدادات السري المخصص (إذا كان موجوداً على السيرفر)
+// [1] فحص ملف الإعدادات السري المخصص (فحص أكثر من مسار لتجنب أخطاء التسمية)
 // --------------------------------------------------------
 if (file_exists(__DIR__ . '/db_config.php')) {
     require_once __DIR__ . '/db_config.php';
+} elseif (file_exists(dirname(__DIR__) . '/db_config.php')) {
+    require_once dirname(__DIR__) . '/db_config.php';
+} elseif (file_exists(__DIR__ . '/db_config.php.txt')) {
+    require_once __DIR__ . '/db_config.php.txt';
+} elseif (file_exists(__DIR__ . '/db_config.sample.php')) {
+    // في حال قام المستخدم بالتعديل داخل ملف sample مباشرة دون تغيير اسمه
+    $sampleCode = @file_get_contents(__DIR__ . '/db_config.sample.php');
+    if ($sampleCode && strpos($sampleCode, 'ضع_اسم_قاعدة_البيانات_هنا') === false) {
+        require_once __DIR__ . '/db_config.sample.php';
+    }
 }
 
 // --------------------------------------------------------
@@ -57,14 +67,32 @@ function getDB() {
             $pdo = new PDO($dsn, DB_USER, DB_PASS, $options);
             ensureTableCaseCompatibility($pdo);
         } catch (PDOException $e) {
-            $errMsg = 'تعذر الاتصال بقاعدة البيانات. تأكد من صحة بيانات السيرفر في config/db.php: ' . $e->getMessage();
+            $hasConfigFile = file_exists(__DIR__ . '/db_config.php') || file_exists(dirname(__DIR__) . '/db_config.php');
+            $errMsg = 'تعذر الاتصال بقاعدة البيانات: ' . $e->getMessage();
+            
             if (!empty($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false) {
                 die(json_encode(['success' => false, 'error' => $errMsg], JSON_UNESCAPED_UNICODE));
             } else {
-                die('<div style="font-family:sans-serif;direction:rtl;padding:30px;text-align:center;color:#b91c1c;background:#fee2e2;border:1px solid #f87171;border-radius:12px;margin:50px auto;max-width:600px;">
-                    <h2 style="margin-top:0;">خطأ في الاتصال بقاعدة البيانات</h2>
-                    <p style="font-size:14px;line-height:1.6;">' . htmlspecialchars($errMsg) . '</p>
-                    <p style="font-size:12px;color:#6b7280;">يرجى مراجعة ملف <code>config/db.php</code> والتأكد من إدخال بيانات الاستضافة الصحيحة (Host, Database, User, Password).</p>
+                $statusNotice = '';
+                if (!$hasConfigFile && DB_USER === 'root') {
+                    $statusNotice = '<div style="background:#fff;padding:15px;border-radius:10px;margin:18px 0;text-align:right;font-size:13px;color:#1e293b;border:1px solid #fecaca;line-height:1.7;">
+                        <strong style="color:#b91c1c;display:block;margin-bottom:6px;">⚠️ لم يتم العثور على ملف <code>config/db_config.php</code> على الاستضافة:</strong>
+                        1. افتح <strong>File Manager</strong> في هوستينجر واذهب إلى <code>public_html/config</code>.<br>
+                        2. ستجد ملفاً باسم <code>db_config.sample.php</code> قم بتغيير اسمه إلى <code>db_config.php</code>.<br>
+                        3. افتحه وضع اسم قاعدة البيانات واسم المستخدم والباسورد التي أنشأتها في هوستينجر ثم اضغط Save.
+                    </div>';
+                } else {
+                    $statusNotice = '<div style="background:#fff;padding:15px;border-radius:10px;margin:18px 0;text-align:right;font-size:13px;color:#1e293b;border:1px solid #fecaca;line-height:1.7;">
+                        <strong style="color:#b91c1c;display:block;margin-bottom:6px;">⚠️ خطأ في مطابقة البيانات:</strong>
+                        تم قراءة الملف ولكن خادم هوستينجر رفض المستخدم (<code>' . htmlspecialchars(DB_USER) . '</code>) أو كلمة المرور.<br>
+                        يرجى مراجعة بيانات قاعدة البيانات في لوحة تحكم هوستينجر والتأكد من كتابة البادئة كاملة (مثل: <code>u123456789_...</code>).
+                    </div>';
+                }
+
+                die('<div style="font-family:system-ui,-apple-system,sans-serif;direction:rtl;padding:30px;text-align:center;color:#b91c1c;background:#fee2e2;border:1px solid #f87171;border-radius:16px;margin:50px auto;max-width:650px;box-shadow:0 10px 25px rgba(0,0,0,0.05);">
+                    <h2 style="margin-top:0;font-size:22px;color:#991b1b;">خطأ في الاتصال بقاعدة البيانات</h2>
+                    <p style="font-size:14px;line-height:1.6;color:#7f1d1d;">' . htmlspecialchars($errMsg) . '</p>
+                    ' . $statusNotice . '
                 </div>');
             }
         }
