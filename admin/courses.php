@@ -68,7 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['add_course']) || iss
         }
         $_SESSION['course_msg_type'] = 'success';
     }
-    header("Location: courses.php");
+    header("Location: /admin/courses.php");
     exit;
 }
 
@@ -83,7 +83,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['cours
         $_SESSION['course_msg'] = 'فشل حذف الكورس: ' . $e->getMessage();
         $_SESSION['course_msg_type'] = 'error';
     }
-    header("Location: courses.php");
+    header("Location: /admin/courses.php");
     exit;
 }
 
@@ -104,7 +104,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_lesson'])) {
         $_SESSION['course_msg'] = "تم إضافة الحصة ($lTitle) بسعر " . number_format($lPrice, 0) . " ج.م بنجاح!";
         $_SESSION['course_msg_type'] = 'success';
     }
-    header("Location: courses.php");
+    header("Location: /admin/courses.php");
     exit;
 }
 
@@ -124,7 +124,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_lesson'])) {
         $_SESSION['course_msg'] = "تم تعديل الحصة وتحديث سعرها إلى " . number_format($lPrice, 0) . " ج.م بنجاح!";
         $_SESSION['course_msg_type'] = 'success';
     }
-    header("Location: courses.php");
+    header("Location: /admin/courses.php");
     exit;
 }
 
@@ -139,7 +139,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_lesson' && isset($_GET
         $_SESSION['course_msg'] = 'فشل حذف الحصة: ' . $e->getMessage();
         $_SESSION['course_msg_type'] = 'error';
     }
-    header("Location: courses.php");
+    header("Location: /admin/courses.php");
     exit;
 }
 

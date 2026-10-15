@@ -569,7 +569,7 @@ require_once __DIR__ . '/header.php';
 
                             <!-- Student Info -->
                             <td class="p-3.5 font-bold text-slate-900">
-                                <a href="student_profile.php?id=<?= urlencode($st['id']) ?>" class="group flex items-center gap-2 hover:text-[#0f766e] transition">
+                                <a href="/admin/student_profile.php?id=<?= urlencode($st['id']) ?>" class="group flex items-center gap-2 hover:text-[#0f766e] transition">
                                     <div class="w-8 h-8 rounded-full <?= $isCenter ? 'bg-amber-100 text-amber-900 border border-amber-300' : 'bg-teal-50 border border-teal-200 text-[#0f766e]' ?> flex items-center justify-center font-bold text-xs shrink-0">
                                         <?= mb_substr($st['fullName'], 0, 1) ?>
                                     </div>
@@ -674,7 +674,7 @@ require_once __DIR__ . '/header.php';
                                     </a>
 
                                     <!-- Student Profile Link -->
-                                    <a href="student_profile.php?id=<?= urlencode($st['id']) ?>" title="الملف الشامل للطالب" class="p-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 transition">
+                                    <a href="/admin/student_profile.php?id=<?= urlencode($st['id']) ?>" title="الملف الشامل للطالب" class="p-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 transition">
                                         <i class="fa-solid fa-arrow-left text-xs"></i>
                                     </a>
                                 </div>
@@ -727,7 +727,7 @@ require_once __DIR__ . '/header.php';
                                         <?php endif; ?>
 
                                         <div class="pt-2 flex justify-end gap-2">
-                                            <a href="student_profile.php?id=<?= urlencode($st['id']) ?>" class="px-4 py-2 bg-[#0f766e] text-white rounded-xl text-xs font-bold hover:bg-[#0d3753] transition">
+                                            <a href="/admin/student_profile.php?id=<?= urlencode($st['id']) ?>" class="px-4 py-2 bg-[#0f766e] text-white rounded-xl text-xs font-bold hover:bg-[#0d3753] transition">
                                                 الملف الكامل للطالب
                                             </a>
                                             <button type="button" onclick="hideQuizHistory('modal-st-<?= $st['id'] ?>')" class="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl text-xs font-bold hover:bg-slate-200 transition">

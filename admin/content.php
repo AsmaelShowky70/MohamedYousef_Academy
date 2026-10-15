@@ -31,7 +31,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['type'
         $_SESSION['content_msg'] = 'حدث خطأ أثناء الحذف: ' . $e->getMessage();
         $_SESSION['content_msg_type'] = 'error';
     }
-    header("Location: content.php");
+    header("Location: /admin/content.php");
     exit;
 }
 
@@ -182,7 +182,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_content'])) {
             $_SESSION['content_msg_type'] = 'error';
         }
     }
-    header("Location: content.php");
+    header("Location: /admin/content.php");
     exit;
 }
 

@@ -19,7 +19,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['yearI
         $_SESSION['year_msg'] = 'فشل حذف المرحلة: ' . $e->getMessage();
         $_SESSION['year_msg_type'] = 'error';
     }
-    header("Location: years.php");
+    header("Location: /admin/years.php");
     exit;
 }
 
@@ -61,7 +61,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_year'])) {
         $_SESSION['year_msg'] = 'تم إضافة المرحلة الدراسية بنجاح!';
         $_SESSION['year_msg_type'] = 'success';
     }
-    header("Location: years.php");
+    header("Location: /admin/years.php");
     exit;
 }
 
@@ -107,7 +107,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_year'])) {
         $_SESSION['year_msg'] = 'تم تحديث بيانات المرحلة بنجاح!';
         $_SESSION['year_msg_type'] = 'success';
     }
-    header("Location: years.php");
+    header("Location: /admin/years.php");
     exit;
 }
 

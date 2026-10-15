@@ -89,15 +89,18 @@ $activeCodes = [];
 
 if ($tab === 'my-courses') {
     $stmtCourses = $db->prepare("
-        SELECT c.*, s.title AS sectionTitle, y.name AS yearName 
-        FROM _CourseToUser cu 
-        JOIN Course c ON cu.A = c.id 
+        SELECT DISTINCT c.*, s.title AS sectionTitle, y.name AS yearName 
+        FROM (
+            SELECT A AS courseId FROM _CourseToUser WHERE B = ?
+            UNION
+            SELECT courseId FROM CourseCode WHERE userId = ? AND (collectionId IS NULL OR collectionId = '') AND expires > NOW()
+        ) enrolled
+        JOIN Course c ON enrolled.courseId = c.id 
         LEFT JOIN Section s ON c.sectionId = s.id 
         LEFT JOIN Year y ON s.yearId = y.id 
-        WHERE cu.B = ?
         ORDER BY c.id DESC
     ");
-    $stmtCourses->execute([$user['id']]);
+    $stmtCourses->execute([$user['id'], $user['id']]);
     $enrolledCourses = $stmtCourses->fetchAll();
 
     $stmtColls = $db->prepare("

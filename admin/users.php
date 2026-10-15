@@ -253,7 +253,7 @@ $years = $db->query("SELECT id, name FROM Year ORDER BY `order` ASC")->fetchAll(
                     ?>
                     <tr class="hover:bg-slate-50/60 transition">
                         <td class="p-4 font-bold text-slate-900">
-                            <a href="student_profile.php?id=<?= urlencode($u['id']) ?>" class="group flex items-center gap-2.5 hover:text-[#0f766e] transition">
+                            <a href="/admin/student_profile.php?id=<?= urlencode($u['id']) ?>" class="group flex items-center gap-2.5 hover:text-[#0f766e] transition">
                                 <div class="w-8 h-8 rounded-full <?= $isCenter ? 'bg-amber-100 text-amber-800 border border-amber-300' : 'bg-teal-50 border border-teal-200 text-[#0f766e]' ?> group-hover:bg-[#0f766e] group-hover:text-white transition flex items-center justify-center font-bold text-xs shrink-0">
                                     <?= mb_substr($u['fullName'] ?: $u['firstName'], 0, 1) ?>
                                 </div>
@@ -296,7 +296,7 @@ $years = $db->query("SELECT id, name FROM Year ORDER BY `order` ASC")->fetchAll(
                         </td>
                         <td class="p-4 text-center">
                             <div class="inline-flex items-center gap-1.5">
-                                <a href="student_profile.php?id=<?= urlencode($u['id']) ?>" title="عرض ملف الطالب والمتابعة والتقارير" class="p-1.5 rounded-lg bg-teal-50 text-teal-700 hover:bg-teal-100 transition">
+                                <a href="/admin/student_profile.php?id=<?= urlencode($u['id']) ?>" title="عرض ملف الطالب والمتابعة والتقارير" class="p-1.5 rounded-lg bg-teal-50 text-teal-700 hover:bg-teal-100 transition">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
                                 </a>
                                 <?php if ($isBanned): ?>

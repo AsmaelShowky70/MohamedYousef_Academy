@@ -10,7 +10,7 @@ if (!$studentId) {
     $adminTitle = "ملف الطالب والمتابعة الشاملة - لوحة التحكم";
     $activeAdminNav = "users";
     require_once __DIR__ . '/header.php';
-    echo "<div class='p-6 text-center text-red-600 font-bold'>لم يتم تحديد معرّف الطالب! <a href='users.php' class='underline'>العودة للطلاب</a></div>";
+    echo "<div class='p-6 text-center text-red-600 font-bold'>لم يتم تحديد معرّف الطالب! <a href='/admin/users.php' class='underline'>العودة للطلاب</a></div>";
     require_once __DIR__ . '/footer.php';
     exit;
 }
@@ -23,7 +23,7 @@ if (!$student) {
     $adminTitle = "ملف الطالب والمتابعة الشاملة - لوحة التحكم";
     $activeAdminNav = "users";
     require_once __DIR__ . '/header.php';
-    echo "<div class='p-6 text-center text-red-600 font-bold'>الطالب غير موجود أو تم حذفه! <a href='users.php' class='underline'>العودة للطلاب</a></div>";
+    echo "<div class='p-6 text-center text-red-600 font-bold'>الطالب غير موجود أو تم حذفه! <a href='/admin/users.php' class='underline'>العودة للطلاب</a></div>";
     require_once __DIR__ . '/footer.php';
     exit;
 }
@@ -76,7 +76,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['student_msg_type'] = 'success';
             }
         }
-        header("Location: student_profile.php?id=" . urlencode($studentId));
+        header("Location: /admin/student_profile.php?id=" . urlencode($studentId));
         exit;
     }
 
@@ -85,7 +85,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $db->prepare("UPDATE User SET status = ? WHERE id = ?")->execute([$newStatus, $studentId]);
         $_SESSION['student_msg'] = ($newStatus === 'BANNED') ? 'تم حظر الطالب بنجاح' : 'تم فك الحظر عن الطالب بنجاح';
         $_SESSION['student_msg_type'] = 'success';
-        header("Location: student_profile.php?id=" . urlencode($studentId));
+        header("Location: /admin/student_profile.php?id=" . urlencode($studentId));
         exit;
     }
 
@@ -96,7 +96,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['student_msg'] = 'تم إزالة الجهاز بنجاح من حساب الطالب!';
             $_SESSION['student_msg_type'] = 'success';
         }
-        header("Location: student_profile.php?id=" . urlencode($studentId));
+        header("Location: /admin/student_profile.php?id=" . urlencode($studentId));
         exit;
     }
 
@@ -104,65 +104,81 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $db->prepare("DELETE FROM Device WHERE userId = ?")->execute([$studentId]);
         $_SESSION['student_msg'] = 'تم فك ربط جميع أجهزة الطالب بنجاح! يمكنه الآن تسجيل الدخول من جهاز جديد.';
         $_SESSION['student_msg_type'] = 'success';
-        header("Location: student_profile.php?id=" . urlencode($studentId));
+        header("Location: /admin/student_profile.php?id=" . urlencode($studentId));
         exit;
     }
 
     if ($action === 'enroll_course') {
-        $courseId = $_POST['courseId'] ?? '';
+        $courseId = trim($_POST['courseId'] ?? '');
         if ($courseId) {
+            $stmtCName = $db->prepare("SELECT title FROM Course WHERE id = ?");
+            $stmtCName->execute([$courseId]);
+            $cName = $stmtCName->fetchColumn() ?: 'الكورس';
+
             $chk = $db->prepare("SELECT 1 FROM _CourseToUser WHERE A = ? AND B = ?");
             $chk->execute([$courseId, $studentId]);
             if (!$chk->fetch()) {
                 $db->prepare("INSERT INTO _CourseToUser (A, B) VALUES (?, ?)")->execute([$courseId, $studentId]);
-                $_SESSION['student_msg'] = 'تم إضافة الكورس للطالب مباشرة بنجاح!';
+                $_SESSION['student_msg'] = 'تم تفعيل كورس (' . $cName . ') للطالب بنجاح!';
                 $_SESSION['student_msg_type'] = 'success';
             } else {
-                $_SESSION['student_msg'] = 'الطالب مشترك بالفعل في هذا الكورس!';
+                $_SESSION['student_msg'] = 'الطالب مفعل له بالفعل كورس (' . $cName . ')!';
                 $_SESSION['student_msg_type'] = 'error';
             }
         }
-        header("Location: student_profile.php?id=" . urlencode($studentId));
+        header("Location: /admin/student_profile.php?id=" . urlencode($studentId));
         exit;
     }
 
     if ($action === 'unenroll_course') {
-        $courseId = $_POST['courseId'] ?? '';
+        $courseId = trim($_POST['courseId'] ?? '');
         if ($courseId) {
+            $stmtCName = $db->prepare("SELECT title FROM Course WHERE id = ?");
+            $stmtCName->execute([$courseId]);
+            $cName = $stmtCName->fetchColumn() ?: 'الكورس';
+
             $db->prepare("DELETE FROM _CourseToUser WHERE A = ? AND B = ?")->execute([$courseId, $studentId]);
-            $_SESSION['student_msg'] = 'تم إلغاء اشتراك الطالب من الكورس بنجاح!';
+            $_SESSION['student_msg'] = 'تم إلغاء تفعيل كورس (' . $cName . ') للطالب بنجاح!';
             $_SESSION['student_msg_type'] = 'success';
         }
-        header("Location: student_profile.php?id=" . urlencode($studentId));
+        header("Location: /admin/student_profile.php?id=" . urlencode($studentId));
         exit;
     }
 
     if ($action === 'enroll_collection') {
-        $collectionId = $_POST['collectionId'] ?? '';
+        $collectionId = trim($_POST['collectionId'] ?? '');
         if ($collectionId) {
+            $stmtColName = $db->prepare("SELECT title FROM Collection WHERE id = ?");
+            $stmtColName->execute([$collectionId]);
+            $colName = $stmtColName->fetchColumn() ?: 'الحصة';
+
             $chk = $db->prepare("SELECT 1 FROM _CollectionToUser WHERE A = ? AND B = ?");
             $chk->execute([$collectionId, $studentId]);
             if (!$chk->fetch()) {
                 $db->prepare("INSERT INTO _CollectionToUser (A, B) VALUES (?, ?)")->execute([$collectionId, $studentId]);
-                $_SESSION['student_msg'] = 'تم إضافة الحصة / الدرس للطالب مباشرة بنجاح!';
+                $_SESSION['student_msg'] = 'تم تفعيل حصة (' . $colName . ') للطالب بنجاح!';
                 $_SESSION['student_msg_type'] = 'success';
             } else {
-                $_SESSION['student_msg'] = 'الطالب مشترك بالفعل في هذه الحصة!';
+                $_SESSION['student_msg'] = 'الطالب مفعل له بالفعل حصة (' . $colName . ')!';
                 $_SESSION['student_msg_type'] = 'error';
             }
         }
-        header("Location: student_profile.php?id=" . urlencode($studentId));
+        header("Location: /admin/student_profile.php?id=" . urlencode($studentId));
         exit;
     }
 
     if ($action === 'unenroll_collection') {
-        $collectionId = $_POST['collectionId'] ?? '';
+        $collectionId = trim($_POST['collectionId'] ?? '');
         if ($collectionId) {
+            $stmtColName = $db->prepare("SELECT title FROM Collection WHERE id = ?");
+            $stmtColName->execute([$collectionId]);
+            $colName = $stmtColName->fetchColumn() ?: 'الحصة';
+
             $db->prepare("DELETE FROM _CollectionToUser WHERE A = ? AND B = ?")->execute([$collectionId, $studentId]);
-            $_SESSION['student_msg'] = 'تم إلغاء اشتراك الطالب من الحصة بنجاح!';
+            $_SESSION['student_msg'] = 'تم إلغاء تفعيل حصة (' . $colName . ') للطالب بنجاح!';
             $_SESSION['student_msg_type'] = 'success';
         }
-        header("Location: student_profile.php?id=" . urlencode($studentId));
+        header("Location: /admin/student_profile.php?id=" . urlencode($studentId));
         exit;
     }
 }
@@ -620,7 +636,7 @@ $years = $db->query("SELECT id, name FROM Year ORDER BY `order` ASC")->fetchAll(
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <!-- Add Course -->
-                <form method="POST" action="student_profile.php?id=<?= urlencode($studentId) ?>" class="p-4 bg-teal-50/50 border border-teal-100 rounded-xl flex flex-col justify-between">
+                <form method="POST" action="/admin/student_profile.php?id=<?= urlencode($studentId) ?>" class="p-4 bg-teal-50/50 border border-teal-100 rounded-xl flex flex-col justify-between">
                     <input type="hidden" name="action" value="enroll_course">
                     <input type="hidden" name="student_id" value="<?= htmlspecialchars($studentId) ?>">
                     <div>
@@ -638,7 +654,7 @@ $years = $db->query("SELECT id, name FROM Year ORDER BY `order` ASC")->fetchAll(
                 </form>
 
                 <!-- Add Lesson/Collection -->
-                <form method="POST" action="student_profile.php?id=<?= urlencode($studentId) ?>" class="p-4 bg-amber-50/50 border border-amber-100 rounded-xl flex flex-col justify-between">
+                <form method="POST" action="/admin/student_profile.php?id=<?= urlencode($studentId) ?>" class="p-4 bg-amber-50/50 border border-amber-100 rounded-xl flex flex-col justify-between">
                     <input type="hidden" name="action" value="enroll_collection">
                     <input type="hidden" name="student_id" value="<?= htmlspecialchars($studentId) ?>">
                     <div>
@@ -665,7 +681,7 @@ $years = $db->query("SELECT id, name FROM Year ORDER BY `order` ASC")->fetchAll(
                             <?php foreach ($enrolledCourses as $ec): ?>
                                 <div class="p-2.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-xs font-bold">
                                     <span class="text-slate-800"><?= htmlspecialchars($ec['title']) ?></span>
-                                    <form method="POST" action="student_profile.php?id=<?= urlencode($studentId) ?>" onsubmit="return confirm('إلغاء اشتراك الطالب في هذا الكورس؟')">
+                                    <form method="POST" action="/admin/student_profile.php?id=<?= urlencode($studentId) ?>" onsubmit="return confirm('إلغاء اشتراك الطالب في هذا الكورس؟')">
                                         <input type="hidden" name="action" value="unenroll_course">
                                         <input type="hidden" name="student_id" value="<?= htmlspecialchars($studentId) ?>">
                                         <input type="hidden" name="courseId" value="<?= htmlspecialchars($ec['id']) ?>">
@@ -689,7 +705,7 @@ $years = $db->query("SELECT id, name FROM Year ORDER BY `order` ASC")->fetchAll(
                                         <span class="text-slate-800"><?= htmlspecialchars($ecl['title']) ?></span>
                                         <span class="text-[10px] text-slate-400 block"><?= htmlspecialchars($ecl['courseTitle'] ?? '') ?></span>
                                     </div>
-                                    <form method="POST" action="student_profile.php?id=<?= urlencode($studentId) ?>" onsubmit="return confirm('إلغاء اشتراك الطالب في هذه الحصة؟')">
+                                    <form method="POST" action="/admin/student_profile.php?id=<?= urlencode($studentId) ?>" onsubmit="return confirm('إلغاء اشتراك الطالب في هذه الحصة؟')">
                                         <input type="hidden" name="action" value="unenroll_collection">
                                         <input type="hidden" name="student_id" value="<?= htmlspecialchars($studentId) ?>">
                                         <input type="hidden" name="collectionId" value="<?= htmlspecialchars($ecl['id']) ?>">

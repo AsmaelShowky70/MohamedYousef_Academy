@@ -55,6 +55,8 @@
     RewriteRule ^register/?$ register.php [QSA,L]
     RewriteRule ^logout/?$ logout.php [QSA,L]
     RewriteRule ^admin/?$ admin/index.php [QSA,L]
+    RewriteRule ^student_profile\.php$ admin/student_profile.php [QSA,L]
+    RewriteRule ^student_profile/?$ admin/student_profile.php [QSA,L]
 
     # General rule: if requested filename + .php exists, rewrite to it
     RewriteCond %{REQUEST_FILENAME}.php -f

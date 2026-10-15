@@ -47,7 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['admins_msg_type'] = 'success';
             }
         }
-        header("Location: admins.php");
+        header("Location: /admin/admins.php");
         exit;
     }
 
@@ -87,7 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['admins_msg'] = 'تم تحديث بيانات وصلاحيات المشرف بنجاح!';
             $_SESSION['admins_msg_type'] = 'success';
         }
-        header("Location: admins.php");
+        header("Location: /admin/admins.php");
         exit;
     }
 
@@ -111,7 +111,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['admins_msg'] = 'تم حذف حساب المشرف (' . htmlspecialchars($target['fullName']) . ') بنجاح!';
             $_SESSION['admins_msg_type'] = 'success';
         }
-        header("Location: admins.php");
+        header("Location: /admin/admins.php");
         exit;
     }
 }

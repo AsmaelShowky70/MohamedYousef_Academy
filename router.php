@@ -66,6 +66,9 @@ $routes = [
     '/logout' => '/logout.php',
     '/admin' => '/admin/index.php',
     '/admin/' => '/admin/index.php',
+    '/admin/student_profile' => '/admin/student_profile.php',
+    '/student_profile' => '/admin/student_profile.php',
+    '/student_profile.php' => '/admin/student_profile.php',
     '/collection' => '/collection.php',
 ];
 
