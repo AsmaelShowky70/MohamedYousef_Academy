@@ -1,0 +1,98 @@
+# ========================================================
+# Hostinger & Apache Configuration
+# Optimized for LiteSpeed & Apache 2.4+
+# ========================================================
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+
+    # Set default charset
+    AddDefaultCharset UTF-8
+
+    # Protect sensitive folders and files
+    RewriteRule ^config/ - [F,L]
+    RewriteRule ^database/ - [F,L]
+    RewriteRule \.(sql|env|log|md|bat)$ - [F,L]
+
+    # Identity and uploads aliases
+    RewriteRule ^api/uploads/(.*)$ public/uploads/$1 [L]
+    RewriteRule ^identity/(.*)$ public/identity/$1 [L]
+    RewriteRule ^profile-bg\.png$ public/profile-bg.png [L]
+
+    # Don't rewrite existing files or directories
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # Dynamic Year and Collection routes
+    RewriteRule ^year/([^/]+)/?$ year.php?id=$1 [QSA,L]
+    RewriteRule ^collection/([^/]+)/?$ collection.php?id=$1 [QSA,L]
+    RewriteRule ^collection/?$ collection.php [QSA,L]
+
+    # Profile sub-routes
+    RewriteRule ^profile/wallet/?$ wallet.php [QSA,L]
+    RewriteRule ^profile/my-courses/?$ profile.php?tab=my-courses [QSA,L]
+    RewriteRule ^profile/my-quizzes/?$ profile.php?tab=my-quizzes [QSA,L]
+    RewriteRule ^profile/code/?$ profile.php?tab=code [QSA,L]
+    RewriteRule ^profile/collection-code/?$ profile.php?tab=collection-code [QSA,L]
+    RewriteRule ^profile/?$ profile.php?tab=info [QSA,L]
+
+    # Clean URL aliases matching Next.js routes
+    RewriteRule ^courses/?$ courses.php [QSA,L]
+    RewriteRule ^course/?$ course.php [QSA,L]
+    RewriteRule ^course/purchase/?$ purchase.php [QSA,L]
+    RewriteRule ^purchase/?$ purchase.php [QSA,L]
+    RewriteRule ^wallet/?$ wallet.php [QSA,L]
+    RewriteRule ^parent/?$ parent.php [QSA,L]
+    RewriteRule ^parent/dashboard/?$ parent.php [QSA,L]
+    RewriteRule ^about-us/?$ about-us.php [QSA,L]
+    RewriteRule ^contact-us/?$ contact-us.php [QSA,L]
+    RewriteRule ^policies/privacy/?$ privacy.php [QSA,L]
+    RewriteRule ^policies/terms-and-conditions/?$ terms.php [QSA,L]
+    RewriteRule ^policies/exchange-return/?$ exchange.php [QSA,L]
+    RewriteRule ^login/?$ login.php [QSA,L]
+    RewriteRule ^register/?$ register.php [QSA,L]
+    RewriteRule ^logout/?$ logout.php [QSA,L]
+    RewriteRule ^admin/?$ admin/index.php [QSA,L]
+
+    # General rule: if requested filename + .php exists, rewrite to it
+    RewriteCond %{REQUEST_FILENAME}.php -f
+    RewriteRule ^([^/]+)/?$ $1.php [QSA,L]
+
+    # Admin subpages: /admin/users -> admin/users.php
+    RewriteCond %{REQUEST_FILENAME}.php -f
+    RewriteRule ^admin/([^/]+)/?$ admin/$1.php [QSA,L]
+</IfModule>
+
+# ========================================================
+# Performance & High Concurrency Optimization (Hostinger)
+# Reduces bandwidth & prevents server hanging
+# ========================================================
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css application/javascript application/json image/svg+xml
+</IfModule>
+
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresDefault "access plus 1 month"
+    ExpiresByType text/html "access plus 0 seconds"
+    ExpiresByType text/css "access plus 1 year"
+    ExpiresByType application/javascript "access plus 1 year"
+    ExpiresByType image/jpeg "access plus 1 year"
+    ExpiresByType image/png "access plus 1 year"
+    ExpiresByType image/webp "access plus 1 year"
+    ExpiresByType image/svg+xml "access plus 1 year"
+    ExpiresByType font/woff2 "access plus 1 year"
+    ExpiresByType font/woff "access plus 1 year"
+    ExpiresByType font/ttf "access plus 1 year"
+</IfModule>
+
+<IfModule mod_headers.c>
+    <FilesMatch "\.(css|js|png|jpg|jpeg|webp|svg|woff2|woff|ttf)$">
+        Header set Cache-Control "max-age=31536000, public, immutable"
+    </FilesMatch>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-XSS-Protection "1; mode=block"
+</IfModule>

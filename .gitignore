@@ -1,0 +1,24 @@
+# Database secrets & local environment
+config/db_config.php
+.env
+*.env
+
+# Large archives & uploads
+htdocs_upload.zip
+*.zip
+*.tar.gz
+*.rar
+
+# Logs & temp files
+*.log
+scratch/
+tmp/
+temp/
+
+# OS & Editor generated files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.suo
+*.user
