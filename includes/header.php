@@ -369,16 +369,19 @@ $whatsappEnabled = getSetting('whatsappFloatingEnabled', 'true') === 'true';
         <!-- Auth Actions inside Drawer -->
         <div class="pt-2 border-t border-slate-100 dark:border-slate-800/80">
             <?php if ($currentUser): ?>
-                <div class="flex items-center gap-2">
+                <div class="grid <?= in_array($currentUser['role'], ['ADMIN', 'SUPERADMIN']) ? 'grid-cols-2' : 'grid-cols-1' ?> gap-2 mb-2">
+                    <a href="/profile.php" class="py-2.5 px-3 text-center bg-primary-custom text-white text-xs font-bold rounded-xl shadow-sm hover:bg-teal-800 transition">
+                        <i class="fa-solid fa-user-graduate ml-1"></i> الملف الشخصي
+                    </a>
                     <?php if (in_array($currentUser['role'], ['ADMIN', 'SUPERADMIN'])): ?>
-                        <a href="/admin/index.php" class="flex-1 py-2.5 px-3 text-center bg-navy-custom text-white text-xs font-bold rounded-xl shadow-sm">
+                        <a href="/admin/index.php" class="py-2.5 px-3 text-center bg-navy-custom text-white text-xs font-bold rounded-xl shadow-sm hover:bg-slate-800 transition">
                             <i class="fa-solid fa-gauge-high text-gold-custom ml-1"></i> لوحة التحكم
                         </a>
                     <?php endif; ?>
-                    <button onclick="handleLogout()" class="flex-1 py-2.5 px-3 text-center border border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400 text-xs font-bold rounded-xl hover:bg-red-50 dark:hover:bg-red-950/30 transition">
-                        <i class="fa-solid fa-right-from-bracket ml-1"></i> تسجيل الخروج
-                    </button>
                 </div>
+                <button onclick="handleLogout()" class="w-full py-2.5 px-3 text-center border border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400 text-xs font-bold rounded-xl hover:bg-red-50 dark:hover:bg-red-950/30 transition">
+                    <i class="fa-solid fa-right-from-bracket ml-1"></i> تسجيل الخروج
+                </button>
             <?php else: ?>
                 <div class="grid grid-cols-2 gap-2">
                     <a href="/login.php" class="py-2.5 px-3 text-center bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-100 text-xs font-bold rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition">
@@ -422,7 +425,7 @@ function toggleMobileNav() {
     }
 }
 
-// Close mobile menu when clicking or tapping outside
+// Close mobile menu when clicking outside
 function handleCloseNavMenu(e) {
     const menu = document.getElementById('mobileNavMenu');
     const btn = document.getElementById('mobileMenuBtn');
@@ -436,7 +439,6 @@ function handleCloseNavMenu(e) {
     }
 }
 document.addEventListener('click', handleCloseNavMenu);
-document.addEventListener('touchstart', handleCloseNavMenu, { passive: true });
 
 // Close mobile menu on resize to desktop
 window.addEventListener('resize', function() {

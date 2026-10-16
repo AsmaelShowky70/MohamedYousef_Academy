@@ -287,20 +287,20 @@ $courses = $coursesStmt->fetchAll();
         </button>
         <div class="flex items-center gap-4 max-sm:hidden">
           <?php if ($currentUser): ?>
-            <a href="profile.php">
-              <button class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-bold border-2 border-PPrimaryColor bg-PPrimaryColor text-white transition-all duration-300 hover:-translate-y-[2px] hover:bg-PThirdColor hover:border-PThirdColor shadow-md hover:shadow-lg h-10 px-4 py-2">الملف الشخصي</button>
+            <a href="/profile.php" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-bold border-2 border-PPrimaryColor bg-PPrimaryColor text-white transition-all duration-300 hover:-translate-y-[2px] hover:bg-PThirdColor hover:border-PThirdColor shadow-md hover:shadow-lg h-10 px-4 py-2 cursor-pointer">
+              الملف الشخصي
             </a>
             <?php if (in_array($currentUser['role'] ?? '', ['ADMIN', 'SUPERADMIN'])): ?>
-              <a href="admin/index.php">
-                <button class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-bold border-2 border-indigo-600 bg-indigo-600 text-white transition-all duration-300 hover:-translate-y-[2px] hover:bg-indigo-700 shadow-md h-10 px-4 py-2">لوحة التحكم</button>
+              <a href="/admin/index.php" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-bold border-2 border-indigo-600 bg-indigo-600 text-white transition-all duration-300 hover:-translate-y-[2px] hover:bg-indigo-700 shadow-md h-10 px-4 py-2 cursor-pointer">
+                لوحة التحكم
               </a>
             <?php endif; ?>
           <?php else: ?>
-            <a href="login.php">
-              <button class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-bold border-2 border-PPrimaryColor bg-PPrimaryColor text-white transition-all duration-300 hover:-translate-y-[2px] hover:bg-PThirdColor hover:border-PThirdColor shadow-md hover:shadow-lg h-10 px-4 py-2">تسجيل الدخول</button>
+            <a href="/login.php" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-bold border-2 border-PPrimaryColor bg-PPrimaryColor text-white transition-all duration-300 hover:-translate-y-[2px] hover:bg-PThirdColor hover:border-PThirdColor shadow-md hover:shadow-lg h-10 px-4 py-2 cursor-pointer">
+              تسجيل الدخول
             </a>
-            <a href="register.php">
-              <button class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-bold border-2 border-PPrimaryColor bg-transparent text-PPrimaryColor transition-all duration-300 hover:-translate-y-[2px] hover:bg-PPrimaryColor hover:text-white shadow-sm hover:shadow-md h-10 px-4 py-2">حساب جديد</button>
+            <a href="/register.php" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-bold border-2 border-PPrimaryColor bg-transparent text-PPrimaryColor transition-all duration-300 hover:-translate-y-[2px] hover:bg-PPrimaryColor hover:text-white shadow-sm hover:shadow-md h-10 px-4 py-2 cursor-pointer">
+              حساب جديد
             </a>
           <?php endif; ?>
         </div>
@@ -315,23 +315,23 @@ $courses = $coursesStmt->fetchAll();
     </div>
     <div id="indexMobileMenu" class="flex w-full flex-col items-center space-y-3 bg-background rounded-b-2xl p-5 text-center shadow-lg drop-shadow-md transition duration-200 dark:border-t dark:border-border sm:hidden hidden">
       <?php if ($currentUser): ?>
-        <a class="w-full" href="profile.php">
-          <button class="inline-flex items-center justify-center whitespace-nowrap rounded-md font-medium ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-10 px-4 py-2 text-md w-full border-2 border-PPrimaryColor bg-PPrimaryColor text-white transition-all duration-300 hover:bg-PThirdColor hover:border-PThirdColor dark:hover:bg-white dark:hover:text-black dark:hover:border-white shadow-md">الملف الشخصي</button>
+        <a href="/profile.php" class="w-full inline-flex items-center justify-center whitespace-nowrap rounded-xl font-bold h-12 px-4 text-base border-2 border-PPrimaryColor bg-PPrimaryColor text-white transition-all duration-300 hover:bg-PThirdColor hover:border-PThirdColor shadow-md cursor-pointer">
+          <i class="fa-solid fa-user ml-2"></i> الملف الشخصي
         </a>
         <?php if (in_array($currentUser['role'] ?? '', ['ADMIN', 'SUPERADMIN'])): ?>
-          <a class="w-full" href="admin/index.php">
-            <button class="inline-flex items-center justify-center whitespace-nowrap rounded-md font-medium ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-10 px-4 py-2 text-md w-full border-2 border-indigo-600 bg-indigo-600 text-white transition-all duration-300 hover:bg-indigo-700 shadow-md">لوحة التحكم</button>
+          <a href="/admin/index.php" class="w-full inline-flex items-center justify-center whitespace-nowrap rounded-xl font-bold h-12 px-4 text-base border-2 border-indigo-600 bg-indigo-600 text-white transition-all duration-300 hover:bg-indigo-700 shadow-md cursor-pointer">
+            <i class="fa-solid fa-gauge-high ml-2"></i> لوحة التحكم
           </a>
         <?php endif; ?>
-        <a class="w-full" href="logout.php">
-          <button class="inline-flex items-center justify-center whitespace-nowrap rounded-md font-medium ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-10 px-4 py-2 text-md w-full border-2 border-red-500 bg-transparent text-red-500 hover:bg-red-500 hover:text-white transition-all duration-300 shadow-sm">تسجيل الخروج</button>
+        <a href="/logout.php" class="w-full inline-flex items-center justify-center whitespace-nowrap rounded-xl font-bold h-12 px-4 text-base border-2 border-red-500 bg-transparent text-red-500 hover:bg-red-500 hover:text-white transition-all duration-300 shadow-sm cursor-pointer">
+          <i class="fa-solid fa-right-from-bracket ml-2"></i> تسجيل الخروج
         </a>
       <?php else: ?>
-        <a class="w-full" href="login.php">
-          <button class="inline-flex items-center justify-center whitespace-nowrap rounded-md font-medium ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-10 px-4 py-2 text-md w-full border-2 border-PPrimaryColor bg-PPrimaryColor text-white transition-all duration-300 hover:bg-PThirdColor hover:border-PThirdColor shadow-md">تسجيل الدخول</button>
+        <a href="/login.php" class="w-full inline-flex items-center justify-center whitespace-nowrap rounded-xl font-bold h-12 px-4 text-base border-2 border-PPrimaryColor bg-PPrimaryColor text-white transition-all duration-300 hover:bg-PThirdColor hover:border-PThirdColor shadow-md cursor-pointer">
+          <i class="fa-solid fa-arrow-right-to-bracket ml-2"></i> تسجيل الدخول
         </a>
-        <a class="w-full" href="register.php">
-          <button class="inline-flex items-center justify-center whitespace-nowrap rounded-md font-medium ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-10 px-4 py-2 text-md w-full border-2 border-PPrimaryColor bg-transparent text-PPrimaryColor transition-all duration-300 hover:bg-PPrimaryColor hover:text-white shadow-sm">حساب جديد</button>
+        <a href="/register.php" class="w-full inline-flex items-center justify-center whitespace-nowrap rounded-xl font-bold h-12 px-4 text-base border-2 border-PPrimaryColor bg-transparent text-PPrimaryColor transition-all duration-300 hover:bg-PPrimaryColor hover:text-white shadow-sm cursor-pointer">
+          <i class="fa-solid fa-user-plus ml-2"></i> حساب جديد
         </a>
       <?php endif; ?>
     </div>
@@ -560,7 +560,6 @@ $courses = $coursesStmt->fetchAll();
   }
 
   document.addEventListener('click', handleOutsideClose);
-  document.addEventListener('touchstart', handleOutsideClose, { passive: true });
 })();
 
 function toggleTheme() {

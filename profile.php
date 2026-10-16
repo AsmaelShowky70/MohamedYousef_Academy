@@ -200,28 +200,22 @@ require_once __DIR__ . '/includes/header.php';
                             <ul class="flex w-full flex-col space-y-7 text-center">
                                 <?php
                                 $navItems = [
-                                    'info' => ['name' => 'البيانات الشخصية', 'link' => '/profile'],
-                                    'my-quizzes' => ['name' => 'سجل الامتحانات', 'link' => '/profile/my-quizzes'],
-                                    'my-courses' => ['name' => 'كورساتي', 'link' => '/profile/my-courses'],
-                                    'code' => ['name' => 'ادخال كود', 'link' => '/profile/code'],
-                                    'collection-code' => ['name' => 'ادخال كود مجموعة', 'link' => '/profile/collection-code'],
+                                    'info' => ['name' => 'البيانات الشخصية', 'link' => '/profile.php?tab=info', 'icon' => 'fa-solid fa-id-card'],
+                                    'my-courses' => ['name' => 'كورساتي', 'link' => '/profile.php?tab=my-courses', 'icon' => 'fa-solid fa-graduation-cap'],
+                                    'my-quizzes' => ['name' => 'سجل الامتحانات', 'link' => '/profile.php?tab=my-quizzes', 'icon' => 'fa-solid fa-clock-rotate-left'],
+                                    'code' => ['name' => 'ادخال كود كورس', 'link' => '/profile.php?tab=code', 'icon' => 'fa-solid fa-key'],
+                                    'collection-code' => ['name' => 'ادخال كود حصة', 'link' => '/profile.php?tab=collection-code', 'icon' => 'fa-solid fa-ticket'],
                                 ];
                                 foreach ($navItems as $key => $item):
                                     $isActive = ($tab === $key);
-                                    if ($isActive):
                                 ?>
-                                    <a class="w-full rounded-[10px] bg-transparent py-2" href="<?= $item['link'] ?>">
-                                        <button type="button" class="w-full justify-start bg-PButtonColor text-[1rem] text-white shadow-lg hover:cursor-default hover:bg-PButtonColor hover:text-white inline-flex items-center rounded-md font-medium h-11 px-8">
-                                            <?= $item['name'] ?>
-                                        </button>
-                                    </a>
-                                <?php else: ?>
-                                    <a href="<?= $item['link'] ?>">
-                                        <button type="button" class="w-full justify-start text-[0.9rem] text-slate-700 dark:text-slate-200 shadow-md transition duration-200 hover:-translate-y-[2px] border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#0e1b29] hover:bg-slate-100 dark:hover:bg-[#162c44] inline-flex items-center rounded-md font-medium h-11 px-8">
-                                            <?= $item['name'] ?>
-                                        </button>
-                                    </a>
-                                <?php endif; endforeach; ?>
+                                    <li class="w-full">
+                                        <a href="<?= $item['link'] ?>" class="w-full justify-start inline-flex items-center gap-3 rounded-xl font-bold h-12 px-5 transition duration-200 cursor-pointer <?= $isActive ? 'bg-PButtonColor text-white shadow-lg pointer-events-none' : 'text-slate-700 dark:text-slate-200 shadow-sm border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#0e1b29] hover:bg-slate-100 dark:hover:bg-[#162c44]' ?>">
+                                            <i class="<?= $item['icon'] ?> text-base"></i>
+                                            <span><?= $item['name'] ?></span>
+                                        </a>
+                                    </li>
+                                <?php endforeach; ?>
                             </ul>
                         </div>
 
@@ -397,10 +391,8 @@ require_once __DIR__ . '/includes/header.php';
                                                                 <p class="font-light opacity-70"><?= htmlspecialchars($course['description'] ?? '') ?></p>
                                                             </div>
                                                             <div class="flex flex-col justify-center gap-3">
-                                                                <a href="/course.php?id=<?= urlencode($course['id']) ?>" class="w-full">
-                                                                    <button class="w-full border-2 border-PButtonColor bg-PButtonColor text-white transition duration-200 hover:-translate-y-[2px] hover:border-PPrimaryColor hover:bg-white hover:text-black py-2 rounded-md font-medium cursor-pointer">
-                                                                        الدخول إلي الكورس
-                                                                    </button>
+                                                                <a href="/course.php?id=<?= urlencode($course['id']) ?>" class="w-full text-center border-2 border-PButtonColor bg-PButtonColor text-white transition duration-200 hover:-translate-y-[2px] hover:border-PPrimaryColor hover:bg-white hover:text-black py-2.5 rounded-xl font-bold cursor-pointer block">
+                                                                    الدخول إلي الكورس
                                                                 </a>
                                                             </div>
                                                         </div>
@@ -446,10 +438,8 @@ require_once __DIR__ . '/includes/header.php';
                                                                 <p class="font-light opacity-70 text-sm">درس تم الاشتراك به بنجاح.</p>
                                                             </div>
                                                             <div class="flex flex-col justify-center gap-3">
-                                                                <a href="/collection.php?id=<?= urlencode($coll['id']) ?>" class="w-full">
-                                                                    <button class="w-full border-2 border-PButtonColor bg-PButtonColor text-white transition duration-200 hover:-translate-y-[2px] hover:border-PPrimaryColor hover:bg-white hover:text-black font-bold py-2 rounded-md cursor-pointer">
-                                                                        الدخول إلي الدرس
-                                                                    </button>
+                                                                <a href="/collection.php?id=<?= urlencode($coll['id']) ?>" class="w-full text-center border-2 border-PButtonColor bg-PButtonColor text-white transition duration-200 hover:-translate-y-[2px] hover:border-PPrimaryColor hover:bg-white hover:text-black font-bold py-2.5 rounded-xl cursor-pointer block">
+                                                                    الدخول إلي الدرس
                                                                 </a>
                                                             </div>
                                                         </div>
@@ -558,10 +548,8 @@ require_once __DIR__ . '/includes/header.php';
                                                             <span class="font-bold text-PPrimaryColor px-2 py-0.5 bg-PPrimaryColor/10 rounded-full"><?= $ac['accessTimes'] ?> <?= !empty($ac['maxUses']) ? "من {$ac['maxUses']}" : "" ?></span>
                                                         </div>
                                                     </div>
-                                                    <a href="<?= !empty($ac['collectionId']) ? '/collection.php?id=' . urlencode($ac['collectionId']) : '/course.php?id=' . urlencode($ac['courseId']) ?>">
-                                                        <button class="w-full font-bold bg-PPrimaryColor hover:bg-PPrimaryColor/90 text-white shadow-sm py-2 rounded-md cursor-pointer transition">
-                                                            <?= !empty($ac['collectionTitle']) ? 'مشاهدة الحصة الآن' : 'استخدام الآن' ?>
-                                                        </button>
+                                                    <a href="<?= !empty($ac['collectionId']) ? '/collection.php?id=' . urlencode($ac['collectionId']) : '/course.php?id=' . urlencode($ac['courseId']) ?>" class="w-full text-center font-bold bg-PPrimaryColor hover:bg-teal-700 text-white shadow-sm py-2.5 rounded-xl cursor-pointer transition block">
+                                                        <?= !empty($ac['collectionTitle']) ? 'مشاهدة الحصة الآن' : 'استخدام الآن' ?>
                                                     </a>
                                                 </div>
                                             <?php endforeach; ?>
@@ -652,10 +640,8 @@ require_once __DIR__ . '/includes/header.php';
             <button type="button" onclick="closeModal('logoutModal')" class="border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-100 rounded-md font-medium h-10 px-6 transition text-sm">
                 إلغاء
             </button>
-            <a href="/logout.php">
-                <button type="button" class="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-md font-medium h-10 px-8 transition text-sm">
-                    تسجيل خروج
-                </button>
+            <a href="/logout.php" class="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-md font-medium h-10 px-8 transition text-sm inline-flex items-center justify-center">
+                تسجيل خروج
             </a>
         </div>
     </div>
@@ -691,11 +677,17 @@ require_once __DIR__ . '/includes/header.php';
 <script>
 function openModal(id) {
     const el = document.getElementById(id);
-    if (el) el.classList.remove('hidden');
+    if (el) {
+        el.classList.remove('hidden');
+        el.style.display = 'flex';
+    }
 }
 function closeModal(id) {
     const el = document.getElementById(id);
-    if (el) el.classList.add('hidden');
+    if (el) {
+        el.classList.add('hidden');
+        el.style.display = 'none';
+    }
 }
 
 
