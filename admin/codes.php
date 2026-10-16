@@ -18,14 +18,15 @@ $sql = "
             LIMIT 1) as boundDeviceInfo
     FROM CourseCode cc
     LEFT JOIN Course c ON cc.courseId = c.id
-    LEFT JOIN Year y ON c.yearId = y.id
+    LEFT JOIN Section s ON c.sectionId = s.id
+    LEFT JOIN Year y ON s.yearId = y.id
     LEFT JOIN Collection col ON cc.collectionId = col.id
     LEFT JOIN User u ON cc.userId = u.id
     WHERE 1=1
 ";
 $params = [];
 if ($yearFilter) {
-    $sql .= " AND c.yearId = ?";
+    $sql .= " AND s.yearId = ?";
     $params[] = $yearFilter;
 }
 if ($courseFilter) {
@@ -81,7 +82,7 @@ $activeAdminNav = "codes";
 require_once __DIR__ . '/header.php';
 
 $years = $db->query("SELECT id, name FROM Year ORDER BY `order` ASC")->fetchAll();
-$courses = $db->query("SELECT id, title, price, yearId FROM Course ORDER BY `order` ASC")->fetchAll();
+$courses = $db->query("SELECT c.id, c.title, c.price, s.yearId FROM Course c LEFT JOIN Section s ON c.sectionId = s.id ORDER BY c.`order` ASC")->fetchAll();
 $allCollections = $db->query("SELECT id, title, price, courseId FROM Collection ORDER BY `order` ASC")->fetchAll();
 
 $coursesByYear = [];
@@ -646,17 +647,6 @@ function printVouchers() {
                         <div class="code-box">${c}</div>
                         <div class="meta">
                             <span>الصلاحية: ${latestBatchMeta.days} يوم</span>
-                            <span>الدخول: ${latestBatchMeta.accessTimes} مرات</span>
-                        </div>
-                    </div>
-                `).join('')}
-            </div>
-            <script>window.onload = function() { window.print(); };<\/script>
-        </body>
-        </html>
-    `);
-    printWindow.document.close();
-}
                             <span>الدخول: ${latestBatchMeta.accessTimes} مرات</span>
                         </div>
                     </div>
