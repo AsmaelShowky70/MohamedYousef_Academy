@@ -422,12 +422,12 @@ html.dark .lesson-active-item {
 }
 </style>
 
-<div class="course-page-wrapper">
-    <div class="course-container space-y-8">
+<div class="course-page-wrapper w-full max-w-full overflow-x-hidden">
+    <div class="course-container space-y-8 w-full max-w-full">
 
         <!-- Top Navigation / Breadcrumbs -->
         <div class="flex flex-wrap items-center justify-between gap-4 text-xs font-bold text-slate-500 dark:text-slate-400">
-            <div class="flex items-center gap-2">
+            <div class="flex flex-wrap items-center gap-2 min-w-0">
                 <a href="/index.php" class="hover:text-primary transition flex items-center gap-1">
                     <i class="fa-solid fa-house"></i>
                     <span>الرئيسية</span>
@@ -441,7 +441,7 @@ html.dark .lesson-active-item {
                     </a>
                 <?php endif; ?>
                 <span>/</span>
-                <span class="text-slate-900 dark:text-white font-extrabold line-clamp-1"><?= htmlspecialchars($course['title']) ?></span>
+                <span class="text-slate-900 dark:text-white font-extrabold line-clamp-1 max-w-[220px] sm:max-w-md truncate"><?= htmlspecialchars($course['title']) ?></span>
             </div>
 
             <div class="flex items-center gap-2">

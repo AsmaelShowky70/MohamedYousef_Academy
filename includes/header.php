@@ -160,9 +160,16 @@ $whatsappEnabled = getSetting('whatsappFloatingEnabled', 'true') === 'true';
             background-color: #0e1b29 !important;
             color: #f8fafc !important;
             border-color: #1e3347 !important;
+        }
         html.dark .bg-background:hover, html.dark button.bg-background:hover {
             background-color: #162c44 !important;
             color: #ffffff !important;
+        }
+
+        /* Prevent horizontal scroll globally */
+        html, body {
+            max-width: 100%;
+            overflow-x: hidden;
         }
 
         /* Mobile Header Responsiveness & Animation */
@@ -195,6 +202,7 @@ $whatsappEnabled = getSetting('whatsappFloatingEnabled', 'true') === 'true';
             }
         }
 
+        /* Guaranteed Desktop/Mobile element toggling across all themes */
         .header-desktop-only {
             display: none !important;
         }
@@ -228,7 +236,7 @@ $whatsappEnabled = getSetting('whatsappFloatingEnabled', 'true') === 'true';
         }
     </style>
 </head>
-<body class="flex flex-col min-h-screen">
+<body class="flex flex-col min-h-screen overflow-x-hidden w-full max-w-full">
 
 <!-- Top Announcement Bar -->
 <div class="bg-navy-custom text-white text-[11px] sm:text-xs py-1.5 sm:py-2 px-3 sm:px-4 text-center font-medium flex items-center justify-center gap-2 sm:gap-3">
@@ -414,15 +422,21 @@ function toggleMobileNav() {
     }
 }
 
-// Close mobile menu when clicking outside
-document.addEventListener('click', function(e) {
+// Close mobile menu when clicking or tapping outside
+function handleCloseNavMenu(e) {
     const menu = document.getElementById('mobileNavMenu');
     const btn = document.getElementById('mobileMenuBtn');
     if (!menu || !btn || menu.classList.contains('hidden')) return;
-    if (!menu.contains(e.target) && !btn.contains(e.target)) {
-        toggleMobileNav();
+    if (btn === e.target || btn.contains(e.target)) return;
+    if (!menu.contains(e.target)) {
+        menu.classList.add('hidden');
+        menu.classList.remove('animate-menu-slide');
+        const icon = document.getElementById('mobileMenuIcon');
+        if (icon) icon.className = 'fa-solid fa-bars text-sm transition-transform duration-200';
     }
-});
+}
+document.addEventListener('click', handleCloseNavMenu);
+document.addEventListener('touchstart', handleCloseNavMenu, { passive: true });
 
 // Close mobile menu on resize to desktop
 window.addEventListener('resize', function() {

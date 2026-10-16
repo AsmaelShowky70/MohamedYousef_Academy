@@ -267,28 +267,79 @@ $courses = $coursesStmt->fetchAll();
         50% { transform: scale(1.22); opacity: 0.3; }
         100% { transform: scale(1.4); opacity: 0; }
       }
+      html, body {
+        max-width: 100%;
+        overflow-x: hidden;
+      }
     </style>
 </head>
-<body dir="rtl" class="flex min-h-screen flex-col bg-PBackgroundColor text-PTextColor transition duration-300">
-<nav class="fixed z-30 w-full top-0 left-0 right-0 flex flex-col items-center pointer-events-none"><div class="relative pointer-events-auto mx-4 mt-3 w-[calc(100%-2rem)] sm:mx-6 sm:w-[calc(100%-3rem)] lg:mx-10 lg:w-[calc(100%-5rem)] flex flex-col justify-around rounded-2xl bg-PBackgroundColor transition-all duration-300 shadow-md"><div class="w-full px-5 lg:px-10 flex h-[80px] items-center justify-between flex-row-reverse"><a class="flex items-center" href="index.php"><img alt="logo" loading="lazy" width="95" height="50" decoding="async" data-nimg="1" class="floting" style="color:transparent"  src="public/identity/logo.png"/></a><div class="flex items-center gap-4 flex-row-reverse"><button type="button" onclick="toggleTheme()" class="inline-flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800 p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 shadow-sm transition" title="تبديل الوضع الليلي / الفاتح"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="block dark:hidden"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="hidden dark:block text-yellow-400"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg></button><div class="flex items-center gap-4 max-sm:hidden">
-    <?php if ($currentUser): ?>
-      <a href="profile.php">
-        <button class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-bold border-2 border-PPrimaryColor bg-PPrimaryColor text-white transition-all duration-300 hover:-translate-y-[2px] hover:bg-PThirdColor hover:border-PThirdColor shadow-md hover:shadow-lg h-10 px-4 py-2">الملف الشخصي</button>
+<body dir="rtl" class="flex min-h-screen flex-col bg-PBackgroundColor text-PTextColor transition duration-300 overflow-x-hidden w-full max-w-full">
+<nav class="fixed z-30 w-full top-0 left-0 right-0 flex flex-col items-center pointer-events-none">
+  <div class="relative pointer-events-auto mx-4 mt-3 w-[calc(100%-2rem)] sm:mx-6 sm:w-[calc(100%-3rem)] lg:mx-10 lg:w-[calc(100%-5rem)] flex flex-col justify-around rounded-2xl bg-PBackgroundColor transition-all duration-300 shadow-md">
+    <div class="w-full px-5 lg:px-10 flex h-[80px] items-center justify-between flex-row-reverse">
+      <a class="flex items-center" href="index.php">
+        <img alt="logo" loading="lazy" width="95" height="50" decoding="async" data-nimg="1" class="floting" style="color:transparent" src="public/identity/logo.png"/>
       </a>
-      <?php if (($currentUser['role'] ?? '') === 'ADMIN'): ?>
-        <a href="admin/index.php">
-          <button class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-bold border-2 border-indigo-600 bg-indigo-600 text-white transition-all duration-300 hover:-translate-y-[2px] hover:bg-indigo-700 shadow-md h-10 px-4 py-2">لوحة التحكم</button>
+      <div class="flex items-center gap-4 flex-row-reverse">
+        <button type="button" onclick="toggleTheme()" class="inline-flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800 p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 shadow-sm transition" title="تبديل الوضع الليلي / الفاتح">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="block dark:hidden"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="hidden dark:block text-yellow-400"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+        </button>
+        <div class="flex items-center gap-4 max-sm:hidden">
+          <?php if ($currentUser): ?>
+            <a href="profile.php">
+              <button class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-bold border-2 border-PPrimaryColor bg-PPrimaryColor text-white transition-all duration-300 hover:-translate-y-[2px] hover:bg-PThirdColor hover:border-PThirdColor shadow-md hover:shadow-lg h-10 px-4 py-2">الملف الشخصي</button>
+            </a>
+            <?php if (in_array($currentUser['role'] ?? '', ['ADMIN', 'SUPERADMIN'])): ?>
+              <a href="admin/index.php">
+                <button class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-bold border-2 border-indigo-600 bg-indigo-600 text-white transition-all duration-300 hover:-translate-y-[2px] hover:bg-indigo-700 shadow-md h-10 px-4 py-2">لوحة التحكم</button>
+              </a>
+            <?php endif; ?>
+          <?php else: ?>
+            <a href="login.php">
+              <button class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-bold border-2 border-PPrimaryColor bg-PPrimaryColor text-white transition-all duration-300 hover:-translate-y-[2px] hover:bg-PThirdColor hover:border-PThirdColor shadow-md hover:shadow-lg h-10 px-4 py-2">تسجيل الدخول</button>
+            </a>
+            <a href="register.php">
+              <button class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-bold border-2 border-PPrimaryColor bg-transparent text-PPrimaryColor transition-all duration-300 hover:-translate-y-[2px] hover:bg-PPrimaryColor hover:text-white shadow-sm hover:shadow-md h-10 px-4 py-2">حساب جديد</button>
+            </a>
+          <?php endif; ?>
+        </div>
+        <button type="button" id="mobileNavToggleBtn" class="duration-200 sm:hidden cursor-pointer p-0.5" aria-label="قائمة الحساب">
+          <div class="rounded-full border-2 border-PPrimaryColor p-2 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+            <svg id="mobileNavArrowIcon" width="20" height="20" style="fill:var(--PButtonColor)" class="transition-transform duration-300" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+              <path d="M502.6 278.6l-128 128c-12.51 12.51-32.76 12.49-45.25 0c-12.5-12.5-12.5-32.75 0-45.25L402.8 288H32C14.31 288 0 273.7 0 255.1S14.31 224 32 224h370.8l-73.38-73.38c-12.5-12.5-12.5-32.75 0-45.25s32.75-12.5 45.25 0l128 128C515.1 245.9 515.1 266.1 502.6 278.6z"></path>
+            </svg>
+          </div>
+        </button>
+      </div>
+    </div>
+    <div id="indexMobileMenu" class="flex w-full flex-col items-center space-y-3 bg-background rounded-b-2xl p-5 text-center shadow-lg drop-shadow-md transition duration-200 dark:border-t dark:border-border sm:hidden hidden">
+      <?php if ($currentUser): ?>
+        <a class="w-full" href="profile.php">
+          <button class="inline-flex items-center justify-center whitespace-nowrap rounded-md font-medium ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-10 px-4 py-2 text-md w-full border-2 border-PPrimaryColor bg-PPrimaryColor text-white transition-all duration-300 hover:bg-PThirdColor hover:border-PThirdColor dark:hover:bg-white dark:hover:text-black dark:hover:border-white shadow-md">الملف الشخصي</button>
+        </a>
+        <?php if (in_array($currentUser['role'] ?? '', ['ADMIN', 'SUPERADMIN'])): ?>
+          <a class="w-full" href="admin/index.php">
+            <button class="inline-flex items-center justify-center whitespace-nowrap rounded-md font-medium ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-10 px-4 py-2 text-md w-full border-2 border-indigo-600 bg-indigo-600 text-white transition-all duration-300 hover:bg-indigo-700 shadow-md">لوحة التحكم</button>
+          </a>
+        <?php endif; ?>
+        <a class="w-full" href="logout.php">
+          <button class="inline-flex items-center justify-center whitespace-nowrap rounded-md font-medium ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-10 px-4 py-2 text-md w-full border-2 border-red-500 bg-transparent text-red-500 hover:bg-red-500 hover:text-white transition-all duration-300 shadow-sm">تسجيل الخروج</button>
+        </a>
+      <?php else: ?>
+        <a class="w-full" href="login.php">
+          <button class="inline-flex items-center justify-center whitespace-nowrap rounded-md font-medium ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-10 px-4 py-2 text-md w-full border-2 border-PPrimaryColor bg-PPrimaryColor text-white transition-all duration-300 hover:bg-PThirdColor hover:border-PThirdColor shadow-md">تسجيل الدخول</button>
+        </a>
+        <a class="w-full" href="register.php">
+          <button class="inline-flex items-center justify-center whitespace-nowrap rounded-md font-medium ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-10 px-4 py-2 text-md w-full border-2 border-PPrimaryColor bg-transparent text-PPrimaryColor transition-all duration-300 hover:bg-PPrimaryColor hover:text-white shadow-sm">حساب جديد</button>
         </a>
       <?php endif; ?>
-    <?php else: ?>
-      <a href="login.php">
-        <button class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-bold border-2 border-PPrimaryColor bg-PPrimaryColor text-white transition-all duration-300 hover:-translate-y-[2px] hover:bg-PThirdColor hover:border-PThirdColor shadow-md hover:shadow-lg h-10 px-4 py-2">تسجيل الدخول</button>
-      </a>
-      <a href="register.php">
-        <button class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-bold border-2 border-PPrimaryColor bg-transparent text-PPrimaryColor transition-all duration-300 hover:-translate-y-[2px] hover:bg-PPrimaryColor hover:text-white shadow-sm hover:shadow-md h-10 px-4 py-2">حساب جديد</button>
-      </a>
-    <?php endif; ?>
-  </div><button class="duration-200 sm:hidden"><div class="rounded-full border-2 border-PPrimaryColor p-2"><svg width="20" height="20" style="fill:var(--PButtonColor)" class="transition-transform duration-200 " xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M502.6 278.6l-128 128c-12.51 12.51-32.76 12.49-45.25 0c-12.5-12.5-12.5-32.75 0-45.25L402.8 288H32C14.31 288 0 273.7 0 255.1S14.31 224 32 224h370.8l-73.38-73.38c-12.5-12.5-12.5-32.75 0-45.25s32.75-12.5 45.25 0l128 128C515.1 245.9 515.1 266.1 502.6 278.6z"></path></svg></div></button></div></div><div class="flex w-full flex-col items-center space-y-4 bg-background rounded-b-2xl p-5 text-center shadow-lg drop-shadow-md transition duration-200 dark:border-t dark:border-border sm:hidden hidden"><a class="w-full" href="profile.php"><button class="inline-flex items-center justify-center whitespace-nowrap rounded-md font-medium ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-10 px-4 py-2 text-md w-full border-2 border-PPrimaryColor bg-PPrimaryColor text-white transition-all duration-300 hover:bg-PThirdColor hover:border-PThirdColor dark:hover:bg-white dark:hover:text-black dark:hover:border-white shadow-md">الملف الشخصي</button></a><a class="w-full" href="logout.php"><button class="inline-flex items-center justify-center whitespace-nowrap rounded-md font-medium ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-10 px-4 py-2 text-md w-full border-2 border-red-500 bg-transparent text-red-500 hover:bg-red-500 hover:text-white transition-all duration-300 shadow-sm">تسجيل الخروج</button></a></div><div class="absolute bottom-0 left-2 right-0 h-[4px] rounded-b-2xl overflow-hidden "><div style="position:absolute;bottom:0;left:0;width:0%;height:4px;background-color:#2f4256;z-index:99;transition:width 0.0s ease-out"></div></div></div></nav>
+    </div>
+    <div class="absolute bottom-0 left-2 right-0 h-[4px] rounded-b-2xl overflow-hidden ">
+      <div style="position:absolute;bottom:0;left:0;width:0%;height:4px;background-color:#2f4256;z-index:99;transition:width 0.0s ease-out"></div>
+    </div>
+  </div>
+</nav>
 <main class="flex flex-grow flex-col">
 <div class="relative">
 <section class="relative mt-[-80px] overflow-hidden pb-5 pt-[95px] sm:pb-8 sm:pt-[130px] lg:pb-10 lg:pt-[120px]" id="hero" dir="rtl">
@@ -460,15 +511,57 @@ $courses = $coursesStmt->fetchAll();
     </svg>
 </a>
 <script>
-// Floating mobile nav toggle
-document.querySelectorAll('button[class*="sm:hidden"]').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const mobileMenu = btn.closest('nav').querySelector('div[class*="sm:hidden hidden"]');
-    if (mobileMenu) {
-      mobileMenu.classList.toggle('hidden');
+// Floating mobile nav toggle with outside-click handling and arrow rotation
+(function() {
+  const toggleBtn = document.getElementById('mobileNavToggleBtn');
+  const menu = document.getElementById('indexMobileMenu');
+  const arrowIcon = document.getElementById('mobileNavArrowIcon');
+
+  function openMenu() {
+    if (!menu) return;
+    menu.classList.remove('hidden');
+    if (arrowIcon) {
+      arrowIcon.classList.add('rotate-90');
     }
-  });
-});
+  }
+
+  function closeMenu() {
+    if (!menu) return;
+    menu.classList.add('hidden');
+    if (arrowIcon) {
+      arrowIcon.classList.remove('rotate-90');
+    }
+  }
+
+  function toggleMenu(e) {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    if (!menu) return;
+    if (menu.classList.contains('hidden')) {
+      openMenu();
+    } else {
+      closeMenu();
+    }
+  }
+
+  if (toggleBtn) {
+    toggleBtn.addEventListener('click', toggleMenu);
+  }
+
+  // Close when tapping anywhere on screen outside the menu
+  function handleOutsideClose(e) {
+    if (!menu || menu.classList.contains('hidden')) return;
+    if (toggleBtn && (toggleBtn === e.target || toggleBtn.contains(e.target))) return;
+    if (!menu.contains(e.target)) {
+      closeMenu();
+    }
+  }
+
+  document.addEventListener('click', handleOutsideClose);
+  document.addEventListener('touchstart', handleOutsideClose, { passive: true });
+})();
 
 function toggleTheme() {
   const isDark = document.documentElement.classList.toggle('dark');
