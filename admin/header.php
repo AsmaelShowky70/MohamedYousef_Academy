@@ -266,6 +266,77 @@ $db = getDB();
         html.dark .bg-slate-200 {
             background-color: #334155 !important;
         }
+    
+        /* ======================================================== */
+        /* Mobile Admin Sidebar Drawer */
+        /* ======================================================== */
+        #adminSidebarBackdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background-color: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            z-index: 9998;
+            opacity: 0;
+            transition: opacity 0.25s ease;
+        }
+        #adminSidebarBackdrop.is-open {
+            display: block !important;
+            opacity: 1 !important;
+        }
+
+        @media (max-width: 1023px) {
+            #adminSidebar {
+                position: fixed !important;
+                top: 0 !important;
+                bottom: 0 !important;
+                right: 0 !important;
+                width: 18rem !important;
+                max-width: 85vw !important;
+                height: 100vh !important;
+                max-height: 100vh !important;
+                z-index: 9999 !important;
+                background-color: #ffffff !important;
+                box-shadow: -5px 0 25px rgba(0, 0, 0, 0.35) !important;
+                transform: translateX(105%) !important;
+                transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.25s !important;
+                display: flex !important;
+                flex-direction: column !important;
+                visibility: hidden !important;
+                pointer-events: none !important;
+                overflow-y: auto !important;
+            }
+            html.dark #adminSidebar {
+                background-color: #0b1522 !important;
+                border-color: #1e3347 !important;
+            }
+            #adminSidebar.is-open {
+                transform: translateX(0) !important;
+                visibility: visible !important;
+                pointer-events: auto !important;
+            }
+        }
+
+        @media (min-width: 1024px) {
+            #adminSidebar {
+                position: static !important;
+                transform: none !important;
+                visibility: visible !important;
+                pointer-events: auto !important;
+                width: 16rem !important;
+                display: flex !important;
+                height: auto !important;
+                z-index: auto !important;
+                box-shadow: none !important;
+            }
+            #adminSidebarBackdrop {
+                display: none !important;
+            }
+            .admin-mobile-only {
+                display: none !important;
+            }
+        }
     </style>
 </head>
 <body class="min-h-screen bg-slate-100/70 text-slate-900 antialiased flex flex-col">
@@ -275,8 +346,8 @@ $db = getDB();
     <!-- Right side: Title & Mobile Toggle -->
     <div class="flex items-center gap-2 sm:gap-3">
         <!-- Mobile Sidebar Toggle -->
-        <button type="button" id="adminSidebarToggle" onclick="toggleAdminSidebar()" class="lg:hidden inline-flex items-center justify-center p-2 rounded-xl text-slate-700 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800 transition cursor-pointer" aria-label="فتح القائمة الرئيسية">
-            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        <button type="button" id="adminSidebarToggle" onclick="toggleAdminSidebar()" class="lg:hidden inline-flex items-center justify-center w-10 h-10 rounded-xl text-slate-700 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800 transition cursor-pointer" aria-label="فتح القائمة الرئيسية">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="pointer-events-none"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
         </button>
 
         <a href="/admin/index.php" class="flex items-center gap-2 group">
@@ -327,12 +398,12 @@ $db = getDB();
 </header>
 
 <!-- Mobile Sidebar Backdrop Overlay -->
-<div id="adminSidebarBackdrop" onclick="closeAdminSidebar()" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 hidden transition-opacity duration-300 opacity-0 lg:hidden"></div>
+<div id="adminSidebarBackdrop" onclick="closeAdminSidebar()"></div>
 
 <!-- Main Page Layout Container (Sidebar on Right, Content on Left) -->
 <div class="flex-1 flex w-full relative">
     <!-- Right Sidebar Navigation (Drawer on Mobile, Fixed Sidebar on Desktop) -->
-    <aside id="adminSidebar" class="fixed inset-y-0 right-0 z-50 w-72 max-w-[85vw] bg-white dark:bg-[#0b1522] border-l border-slate-200 dark:border-slate-800 p-4 space-y-1.5 overflow-y-auto transform translate-x-full lg:translate-x-0 lg:static lg:w-64 lg:flex-shrink-0 lg:bg-[#eef3f8]/70 lg:min-h-[calc(100vh-64px)] shadow-2xl lg:shadow-none transition-transform duration-300 ease-in-out flex flex-col justify-between">
+    <aside id="adminSidebar" class="border-l border-slate-200 dark:border-slate-800 p-4 space-y-1.5 overflow-y-auto lg:w-64 lg:flex-shrink-0 lg:bg-[#eef3f8]/70 lg:min-h-[calc(100vh-64px)] flex flex-col justify-between">
         <div>
             <!-- Mobile Drawer Top Header (Shown on mobile only) -->
             <div class="flex items-center justify-between pb-3 mb-3 border-b border-slate-200 dark:border-slate-800 lg:hidden">
@@ -345,8 +416,8 @@ $db = getDB();
                         <span class="text-[10px] text-slate-400 font-bold"><?= htmlspecialchars($adminUser['firstName'] ?? 'المسؤول') ?></span>
                     </div>
                 </div>
-                <button type="button" onclick="closeAdminSidebar()" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition" aria-label="إغلاق القائمة">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                <button type="button" id="adminCloseSidebarBtn" onclick="closeAdminSidebar()" class="w-9 h-9 flex items-center justify-center rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-500 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition cursor-pointer" aria-label="إغلاق القائمة">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="pointer-events-none"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
             </div>
 
@@ -397,7 +468,7 @@ $db = getDB();
 
             <?php if (hasAdminPermission('settings', $adminUser)): ?>
             <a href="/admin/settings.php" class="flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-bold transition <?= ($activeAdminNav ?? '') === 'settings' ? 'bg-white text-[#0f766e] shadow-sm dark:bg-[#162c44] dark:text-teal-400' : 'text-slate-600 hover:bg-white/70 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-[#132337] dark:hover:text-white' ?>">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
                 <span>الإعدادات</span>
             </a>
             <?php endif; ?>
@@ -434,43 +505,30 @@ function toggleTheme() {
     } catch(e) {}
 }
 
-function toggleAdminSidebar() {
-    const sidebar = document.getElementById('adminSidebar');
-    const backdrop = document.getElementById('adminSidebarBackdrop');
-    if (!sidebar || !backdrop) return;
-    const isClosed = sidebar.classList.contains('translate-x-full');
-    if (isClosed) {
-        openAdminSidebar();
-    } else {
-        closeAdminSidebar();
-    }
-}
-
 function openAdminSidebar() {
     const sidebar = document.getElementById('adminSidebar');
     const backdrop = document.getElementById('adminSidebarBackdrop');
-    if (!sidebar || !backdrop) return;
-    backdrop.classList.remove('hidden');
-    void backdrop.offsetWidth; // Force reflow
-    backdrop.classList.remove('opacity-0');
-    backdrop.classList.add('opacity-100');
-    sidebar.classList.remove('translate-x-full');
-    document.body.classList.add('overflow-hidden', 'lg:overflow-auto');
+    if (sidebar) sidebar.classList.add('is-open');
+    if (backdrop) backdrop.classList.add('is-open');
+    document.body.style.overflow = 'hidden';
 }
 
 function closeAdminSidebar() {
     const sidebar = document.getElementById('adminSidebar');
     const backdrop = document.getElementById('adminSidebarBackdrop');
-    if (!sidebar || !backdrop) return;
-    sidebar.classList.add('translate-x-full');
-    backdrop.classList.remove('opacity-100');
-    backdrop.classList.add('opacity-0');
-    setTimeout(() => {
-        if (sidebar && sidebar.classList.contains('translate-x-full')) {
-            backdrop.classList.add('hidden');
-        }
-    }, 300);
-    document.body.classList.remove('overflow-hidden', 'lg:overflow-auto');
+    if (sidebar) sidebar.classList.remove('is-open');
+    if (backdrop) backdrop.classList.remove('is-open');
+    document.body.style.overflow = '';
+}
+
+function toggleAdminSidebar() {
+    const sidebar = document.getElementById('adminSidebar');
+    if (!sidebar) return;
+    if (sidebar.classList.contains('is-open')) {
+        closeAdminSidebar();
+    } else {
+        openAdminSidebar();
+    }
 }
 
 window.addEventListener('resize', function() {
@@ -480,6 +538,21 @@ window.addEventListener('resize', function() {
 });
 
 document.addEventListener('DOMContentLoaded', function() {
+    const closeBtn = document.getElementById('adminCloseSidebarBtn');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            closeAdminSidebar();
+        });
+    }
+    const backdrop = document.getElementById('adminSidebarBackdrop');
+    if (backdrop) {
+        backdrop.addEventListener('click', function(e) {
+            e.preventDefault();
+            closeAdminSidebar();
+        });
+    }
     const sidebar = document.getElementById('adminSidebar');
     if (sidebar) {
         sidebar.querySelectorAll('a').forEach(link => {

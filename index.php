@@ -291,8 +291,8 @@ $courses = $coursesStmt->fetchAll();
               الملف الشخصي
             </a>
             <?php if (in_array($currentUser['role'] ?? '', ['ADMIN', 'SUPERADMIN'])): ?>
-              <a href="/admin/index.php" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-bold border-2 border-indigo-600 bg-indigo-600 text-white transition-all duration-300 hover:-translate-y-[2px] hover:bg-indigo-700 shadow-md h-10 px-4 py-2 cursor-pointer">
-                لوحة التحكم
+              <a href="/admin/index.php" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-bold border-2 border-[#0d3753] bg-[#0d3753] text-white transition-all duration-300 hover:-translate-y-[2px] hover:bg-[#092539] hover:border-[#092539] shadow-md h-10 px-4 py-2 cursor-pointer" style="background-color: #0d3753 !important; border-color: #0d3753 !important; color: #ffffff !important;">
+                <i class="fa-solid fa-gauge-high ml-1 text-[#c79a32]"></i> لوحة التحكم
               </a>
             <?php endif; ?>
           <?php else: ?>
@@ -319,8 +319,8 @@ $courses = $coursesStmt->fetchAll();
           <i class="fa-solid fa-user ml-2"></i> الملف الشخصي
         </a>
         <?php if (in_array($currentUser['role'] ?? '', ['ADMIN', 'SUPERADMIN'])): ?>
-          <a href="/admin/index.php" class="w-full inline-flex items-center justify-center whitespace-nowrap rounded-xl font-bold h-12 px-4 text-base border-2 border-indigo-600 bg-indigo-600 text-white transition-all duration-300 hover:bg-indigo-700 shadow-md cursor-pointer">
-            <i class="fa-solid fa-gauge-high ml-2"></i> لوحة التحكم
+          <a href="/admin/index.php" class="w-full inline-flex items-center justify-center whitespace-nowrap rounded-xl font-bold h-12 px-4 text-base border-2 border-[#0d3753] bg-[#0d3753] text-white transition-all duration-300 hover:bg-[#092539] hover:border-[#092539] shadow-md cursor-pointer" style="background-color: #0d3753 !important; border-color: #0d3753 !important; color: #ffffff !important;">
+            <i class="fa-solid fa-gauge-high ml-2 text-[#c79a32]"></i> لوحة التحكم
           </a>
         <?php endif; ?>
         <a href="/logout.php" class="w-full inline-flex items-center justify-center whitespace-nowrap rounded-xl font-bold h-12 px-4 text-base border-2 border-red-500 bg-transparent text-red-500 hover:bg-red-500 hover:text-white transition-all duration-300 shadow-sm cursor-pointer">
