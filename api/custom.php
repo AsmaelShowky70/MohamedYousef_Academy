@@ -411,5 +411,28 @@ if ($action === 'remove-device') {
     ]);
 }
 
+// 10. POST mark-video-watched
+if ($action === 'mark-video-watched') {
+    $user = requireAuth();
+    $videoId = trim($input['videoId'] ?? '');
+    $courseId = trim($input['courseId'] ?? '');
+    if (!$videoId) {
+        jsonResponse(['success' => false, 'error' => 'videoId is required'], 400);
+    }
+
+    $stmtView = $db->prepare("SELECT id FROM VideoView WHERE userId = ? AND videoId = ? LIMIT 1");
+    $stmtView->execute([$user['id'], $videoId]);
+    $row = $stmtView->fetch();
+    if ($row) {
+        $db->prepare("UPDATE VideoView SET viewCount = viewCount + 1, updatedAt = NOW() WHERE id = ?")->execute([$row['id']]);
+    } else {
+        $viewId = generateId(5);
+        $db->prepare("INSERT INTO VideoView (id, userId, videoId, courseId, viewCount, createdAt, updatedAt) VALUES (?, ?, ?, ?, 1, NOW(), NOW())")
+           ->execute([$viewId, $user['id'], $videoId, $courseId ?: null]);
+    }
+
+    jsonResponse(['success' => true, 'message' => 'تم تسجيل مشاهدة الفيديو بنجاح']);
+}
+
 jsonResponse(['success' => false, 'error' => 'Endpoint not found'], 404);
 
