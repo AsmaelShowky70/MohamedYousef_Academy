@@ -87,31 +87,58 @@ $stmtCol = $db->prepare("SELECT * FROM Collection WHERE courseId = ? ORDER BY `o
 $stmtCol->execute([$courseId]);
 $collections = $stmtCol->fetchAll();
 
+// 1. Fetch passed quizzes for current student
+$passedQuizIds = [];
+if ($user) {
+    // From QuizAttempt (>= 50%)
+    try {
+        $stmtQA = $db->prepare("SELECT quizId, solvedCorrectly, numberOfQuestion FROM QuizAttempt WHERE userId = ?");
+        $stmtQA->execute([$user['id']]);
+        while ($row = $stmtQA->fetch()) {
+            $solved = json_decode($row['solvedCorrectly'] ?? '[]', true) ?: [];
+            $cCount = count($solved);
+            $tCount = max(1, (int)$row['numberOfQuestion']);
+            if (($cCount / $tCount) >= 0.5) {
+                $passedQuizIds[] = $row['quizId'];
+            }
+        }
+    } catch (Exception $e) {}
+
+    // From Progress table
+    try {
+        $stmtProg = $db->prepare("SELECT passedQuizzes FROM Progress WHERE userId = ? LIMIT 1");
+        $stmtProg->execute([$user['id']]);
+        $pQuizzes = $stmtProg->fetchColumn();
+        if ($pQuizzes) {
+            $dec = json_decode($pQuizzes, true) ?: [];
+            $passedQuizIds = array_unique(array_merge($passedQuizIds, $dec));
+        }
+    } catch (Exception $e) {}
+}
+
 $allVideos = [];
 $totalVideosCount = 0;
 $totalFilesCount = 0;
 $totalQuizzesCount = 0;
 
-foreach ($collections as &$col) {
-    $col['isUnlocked'] = $isFullCourseAccess || in_array($col['id'], $enrolledCollectionIds);
-
+// Load items for each collection
+foreach ($collections as $idx => &$col) {
     // Videos
     $stmtV = $db->prepare("SELECT * FROM Video WHERE collectionId = ? ORDER BY `order` ASC, id ASC");
     $stmtV->execute([$col['id']]);
     $col['videos'] = $stmtV->fetchAll();
     $totalVideosCount += count($col['videos']);
     foreach ($col['videos'] as $v) {
-        $v['isUnlocked'] = $col['isUnlocked'];
         $allVideos[] = $v;
     }
 
-    // Files
+    // Files (PDFs)
     $stmtF = $db->prepare("SELECT * FROM File WHERE collectionId = ? ORDER BY `order` ASC, id ASC");
     $stmtF->execute([$col['id']]);
     $col['files'] = $stmtF->fetchAll();
     $totalFilesCount += count($col['files']);
 
-    // Quizzes (if Quiz table exists)
+    // Quizzes (Exams)
     try {
         $stmtQ = $db->prepare("SELECT * FROM Quiz WHERE collectionId = ? ORDER BY `order` ASC, id ASC");
         $stmtQ->execute([$col['id']]);
@@ -120,16 +147,50 @@ foreach ($collections as &$col) {
     } catch (Exception $e) {
         $col['quizzes'] = [];
     }
+
+    // Check purchase status
+    $col['isPurchased'] = $isAdmin || $isFullCourseAccess || in_array($col['id'], $enrolledCollectionIds);
+
+    // Check Prerequisite Quiz Lock (if previous collection has a quiz and student didn't pass it)
+    $col['isQuizLocked'] = false;
+    $col['lockingQuiz'] = null;
+    if (!$isAdmin && $idx > 0) {
+        $prevCol = $collections[$idx - 1];
+        if (!empty($prevCol['quizzes'])) {
+            $hasPassedPrevQuiz = false;
+            foreach ($prevCol['quizzes'] as $pq) {
+                if (in_array($pq['id'], $passedQuizIds)) {
+                    $hasPassedPrevQuiz = true;
+                    break;
+                }
+            }
+            if (!$hasPassedPrevQuiz) {
+                $col['isQuizLocked'] = true;
+                $col['lockingQuiz'] = $prevCol['quizzes'][0];
+            }
+        }
+    }
+
+    // Collection is fully unlocked if purchased and not locked by quiz
+    $col['isUnlocked'] = $col['isPurchased'] && !$col['isQuizLocked'];
+
+    foreach ($col['videos'] as &$v) {
+        $v['isUnlocked'] = $col['isUnlocked'];
+    }
+    unset($v);
 }
 unset($col);
 
-// Active video to play
+// 2. Active Collection & Video Resolution
+$requestedColId = trim($_GET['col'] ?? '');
 $activeVideoId = trim($_GET['v'] ?? '');
+$activeCollection = null;
 $activeVideo = null;
 $activeVideoIndex = -1;
-$activeCollection = null;
+$hasSelectedLesson = false;
 
-if (!empty($allVideos)) {
+if ($isFullCourseAccess) {
+    $hasSelectedLesson = true;
     if ($activeVideoId) {
         foreach ($allVideos as $idx => $v) {
             if ($v['id'] === $activeVideoId) {
@@ -138,41 +199,92 @@ if (!empty($allVideos)) {
                 break;
             }
         }
-    }
-    
-    // If no video requested or not found, choose best default:
-    if (!$activeVideo) {
-        // If user is not full course enrolled, look for first unlocked video
-        if (!$isFullCourseAccess && !empty($enrolledCollectionIds)) {
+        if ($activeVideo) {
+            foreach ($collections as $col) {
+                if ($col['id'] === $activeVideo['collectionId']) {
+                    $activeCollection = $col;
+                    break;
+                }
+            }
+        }
+    } elseif ($requestedColId) {
+        foreach ($collections as $col) {
+            if ($col['id'] === $requestedColId) {
+                $activeCollection = $col;
+                break;
+            }
+        }
+        if ($activeCollection && !empty($activeCollection['videos'])) {
+            $activeVideo = $activeCollection['videos'][0];
             foreach ($allVideos as $idx => $v) {
-                if (in_array($v['collectionId'], $enrolledCollectionIds)) {
-                    $activeVideo = $v;
+                if ($v['id'] === $activeVideo['id']) {
                     $activeVideoIndex = $idx;
                     break;
                 }
             }
         }
-        // Fallback to first video
-        if (!$activeVideo) {
-            $activeVideo = $allVideos[0];
-            $activeVideoIndex = 0;
+    } else {
+        // Default to first collection
+        if (!empty($collections)) {
+            $activeCollection = $collections[0];
+            if (!empty($activeCollection['videos'])) {
+                $activeVideo = $activeCollection['videos'][0];
+                $activeVideoIndex = 0;
+            }
         }
     }
-
-    // Find active collection
-    foreach ($collections as $col) {
-        if ($col['id'] === $activeVideo['collectionId']) {
-            $activeCollection = $col;
-            break;
+} else {
+    // Student without full course:
+    // If they explicitly picked a collection or a video, show that lesson!
+    if ($requestedColId || $activeVideoId) {
+        $hasSelectedLesson = true;
+        if ($activeVideoId) {
+            foreach ($allVideos as $idx => $v) {
+                if ($v['id'] === $activeVideoId) {
+                    $activeVideo = $v;
+                    $activeVideoIndex = $idx;
+                    break;
+                }
+            }
+            if ($activeVideo) {
+                foreach ($collections as $col) {
+                    if ($col['id'] === $activeVideo['collectionId']) {
+                        $activeCollection = $col;
+                        break;
+                    }
+                }
+            }
+        } elseif ($requestedColId) {
+            foreach ($collections as $col) {
+                if ($col['id'] === $requestedColId) {
+                    $activeCollection = $col;
+                    break;
+                }
+            }
+            if ($activeCollection && !empty($activeCollection['videos'])) {
+                $activeVideo = $activeCollection['videos'][0];
+                foreach ($allVideos as $idx => $v) {
+                    if ($v['id'] === $activeVideo['id']) {
+                        $activeVideoIndex = $idx;
+                        break;
+                    }
+                }
+            }
         }
+    } else {
+        // No lesson picked yet!
+        $hasSelectedLesson = false;
+        $activeCollection = null;
+        $activeVideo = null;
     }
 }
 
-// Check access for active video
-$canAccessActiveVideo = $isFullCourseAccess || ($activeVideo && in_array($activeVideo['collectionId'], $enrolledCollectionIds));
-$canAccess = $isFullCourseAccess; // for course-level banner checks
+// Can access active video / lesson
+$canAccessActiveLesson = $activeCollection && $activeCollection['isUnlocked'];
+$canAccessActiveVideo = $canAccessActiveLesson && $activeVideo;
+$canAccess = $isFullCourseAccess;
 
-// Next and Previous videos
+// Next and Previous videos in the active collection or overall
 $prevVideo = ($activeVideoIndex > 0) ? $allVideos[$activeVideoIndex - 1] : null;
 $nextVideo = ($activeVideoIndex >= 0 && $activeVideoIndex < count($allVideos) - 1) ? $allVideos[$activeVideoIndex + 1] : null;
 
@@ -192,19 +304,19 @@ if ($canAccessActiveVideo && $activeVideo && $user) {
     } catch (Exception $e) {}
 }
 
-// Helper: parse video source
+// Helper: parse video source (NO AUTOPLAY, fs=0 for custom fullscreen)
 if (!function_exists('parseVideoSource')) {
     function parseVideoSource($link, $videoId = '') {
         $link = trim((string)$link);
 
-        // 1. YouTube (Supports watch URLs, youtu.be, embed, shorts, live, unlisted, and raw 11-char IDs)
+        // 1. YouTube (fs=0 so native fullscreen is replaced by secure container fullscreen)
         if (preg_match('#(?:youtu\.be/|youtube(?:-nocookie)?\.com/(?:embed/|v/|watch\?v=|watch\?.+&v=|shorts/|live/))([\w-]{11})#i', $link, $m) ||
             (preg_match('#^[\w-]{11}$#', $link) && !preg_match('#\.mp4$#i', $link))) {
             $ytId = isset($m[1]) ? $m[1] : $link;
             return [
                 'type' => 'youtube',
                 'id' => $ytId,
-                'embedUrl' => 'https://www.youtube-nocookie.com/embed/' . $ytId . '?autoplay=0&rel=0&modestbranding=1&enablejsapi=1&playsinline=1&controls=1&iv_load_policy=3&fs=1'
+                'embedUrl' => 'https://www.youtube-nocookie.com/embed/' . $ytId . '?autoplay=0&rel=0&modestbranding=1&enablejsapi=1&playsinline=1&controls=1&iv_load_policy=3&fs=0'
             ];
         }
 
@@ -213,20 +325,19 @@ if (!function_exists('parseVideoSource')) {
             return [
                 'type' => 'dailymotion',
                 'id' => $m[1],
-                'embedUrl' => 'https://geo.dailymotion.com/player/xmztx.html?video=' . $m[1] . '&loop=true'
+                'embedUrl' => 'https://geo.dailymotion.com/player/xmztx.html?video=' . $m[1] . '&loop=true&autoplay=false&mute=false'
             ];
         }
 
-        // Dailymotion Alphanumeric ID (e.g. k6qFi9H1Z6q8pdIIDES or x8abcde)
         if (preg_match('#^[a-zA-Z0-9_-]{12,25}$#', $link) && !preg_match('#\.mp4$#i', $link)) {
             return [
                 'type' => 'dailymotion',
                 'id' => $link,
-                'embedUrl' => 'https://geo.dailymotion.com/player/xmztx.html?video=' . $link . '&loop=true'
+                'embedUrl' => 'https://geo.dailymotion.com/player/xmztx.html?video=' . $link . '&loop=true&autoplay=false&mute=false'
             ];
         }
 
-        // 3. MP4 (Streamed via authenticated stream controller)
+        // 3. MP4
         return [
             'type' => 'mp4',
             'url' => '/api/stream.php?id=' . urlencode($videoId)
@@ -325,6 +436,58 @@ require_once __DIR__ . '/includes/header.php';
     display: block;
     object-fit: contain;
     background-color: #000;
+}
+
+/* Secure Fullscreen Mode - Keeps watermarks, tamper shield, and custom controls on top */
+.player-cinema-box:fullscreen,
+.player-cinema-box:-webkit-full-screen,
+.player-cinema-box:-moz-full-screen,
+.player-cinema-box:-ms-fullscreen {
+    width: 100vw !important;
+    height: 100vh !important;
+    max-width: 100vw !important;
+    max-height: 100vh !important;
+    aspect-ratio: auto !important;
+    border-radius: 0 !important;
+    border: none !important;
+    background-color: #000000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    z-index: 2147483640 !important;
+}
+
+.player-cinema-box:fullscreen #player-mount-point,
+.player-cinema-box:-webkit-full-screen #player-mount-point {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    z-index: 10 !important;
+}
+
+.player-cinema-box:fullscreen .watermark-tiled-grid,
+.player-cinema-box:-webkit-full-screen .watermark-tiled-grid {
+    z-index: 2147483630 !important;
+    position: absolute !important;
+    inset: 0 !important;
+}
+
+.player-cinema-box:fullscreen .floating-watermark-badge,
+.player-cinema-box:-webkit-full-screen .floating-watermark-badge {
+    z-index: 2147483640 !important;
+    position: absolute !important;
+}
+
+.player-cinema-box:fullscreen .security-screen-shield,
+.player-cinema-box:-webkit-full-screen .security-screen-shield {
+    z-index: 2147483646 !important;
+    position: absolute !important;
+    inset: 0 !important;
+}
+
+.player-cinema-box:fullscreen #secureFullscreenBtn,
+.player-cinema-box:-webkit-full-screen #secureFullscreenBtn {
+    z-index: 2147483647 !important;
 }
 
 /* Anti-Piracy & Anti-Print System Protection */
@@ -562,9 +725,17 @@ html.dark .lesson-active-item {
             <!-- MAIN COLUMN: Video Player & Details -->
             <div class="space-y-6">
 
-                <?php if ($canAccessActiveVideo && $activeVideo && $videoSource): ?>
-                    <!-- Secure Video Cinema Player -->
+                <?php if ($hasSelectedLesson && $canAccessActiveVideo && $activeVideo && $videoSource): ?>
+                    <!-- 1. UNLOCKED LESSON CINEMA PLAYER -->
                     <div id="secure-player-wrapper" class="player-cinema-box select-none relative overflow-hidden protected-content" oncontextmenu="return false;">
+
+                        <!-- Secure Fullscreen Toggle Button (Keeps watermarks on top) -->
+                        <div class="absolute top-3 left-3 z-40 flex items-center gap-2">
+                            <button id="secureFullscreenBtn" type="button" onclick="toggleSecureFullscreen()" class="px-3.5 py-1.5 rounded-xl bg-black/75 hover:bg-black/90 border border-white/20 text-white text-xs font-bold transition flex items-center gap-1.5 backdrop-blur-md shadow-lg" title="شاشة كاملة آمنة">
+                                <i class="fa-solid fa-expand ml-1"></i>
+                                <span class="hidden sm:inline">شاشة كاملة</span>
+                            </button>
+                        </div>
 
                         <!-- Active Anti-Recording & Anti-Screenshot Shield -->
                         <div id="tamper-shield" class="security-screen-shield" style="display: none;">
@@ -627,9 +798,9 @@ html.dark .lesson-active-item {
                         <!-- Player Mount Point -->
                         <div id="player-mount-point" class="w-full h-full transition-all duration-300" data-player="<?= htmlspecialchars($encryptedVideoPayload) ?>">
                             <?php if ($videoSource['type'] === 'youtube'): ?>
-                                <iframe id="video-frame" src="<?= htmlspecialchars($videoSource['embedUrl']) ?>" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen class="w-full h-full border-0 block bg-black"></iframe>
+                                <iframe id="video-frame" src="<?= htmlspecialchars($videoSource['embedUrl']) ?>" allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen class="w-full h-full border-0 block bg-black"></iframe>
                             <?php elseif ($videoSource['type'] === 'dailymotion'): ?>
-                                <iframe id="video-frame" src="<?= htmlspecialchars($videoSource['embedUrl']) ?>" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen class="w-full h-full border-0 block bg-black"></iframe>
+                                <iframe id="video-frame" src="<?= htmlspecialchars($videoSource['embedUrl']) ?>" allow="picture-in-picture" allowfullscreen class="w-full h-full border-0 block bg-black"></iframe>
                             <?php elseif ($videoSource['type'] === 'mp4'): ?>
                                 <video id="direct-video-player" controls controlsList="nodownload" class="w-full h-full object-contain bg-black">
                                     <source src="<?= htmlspecialchars($videoSource['url']) ?>" type="video/mp4">
@@ -650,8 +821,10 @@ html.dark .lesson-active-item {
                         </div>
                     </div>
 
-                    <!-- Video Controls & Metadata Bar -->
-                    <div class="course-card p-6 space-y-4">
+                    <!-- Video Controls, Multi-Video Switcher & Metadata Bar -->
+                    <div class="course-card p-6 space-y-5">
+                        
+                        <!-- Top Bar: Lesson Title & Multi-Video Switcher -->
                         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800 pb-4">
                             <div>
                                 <div class="flex items-center gap-2 mb-1.5">
@@ -691,6 +864,27 @@ html.dark .lesson-active-item {
                             </div>
                         </div>
 
+                        <!-- Multi-Video Tabs within the Same Lesson (فيديو الشرح وفيديو الحل) -->
+                        <?php if ($activeCollection && count($activeCollection['videos']) > 1): ?>
+                            <div class="p-3 bg-slate-50 dark:bg-slate-800/70 rounded-2xl border border-slate-200/80 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                <div class="text-xs font-bold text-slate-600 dark:text-slate-300 flex items-center gap-2">
+                                    <i class="fa-solid fa-clapperboard text-primary"></i>
+                                    <span>فيديوهات هذا الدرس:</span>
+                                </div>
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <?php foreach ($activeCollection['videos'] as $vIdx => $vItem): 
+                                        $isThisActive = ($activeVideo['id'] === $vItem['id']);
+                                    ?>
+                                        <a href="/course.php?id=<?= urlencode($courseId) ?>&v=<?= urlencode($vItem['id']) ?>" 
+                                           class="px-4 py-2 rounded-xl text-xs font-black transition flex items-center gap-2 <?= $isThisActive ? 'bg-primary text-white shadow-md' : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:border-primary' ?>">
+                                            <i class="fa-solid <?= $vIdx === 0 ? 'fa-play' : 'fa-pen-to-square' ?>"></i>
+                                            <span><?= htmlspecialchars($vItem['title'] ?: ($vIdx === 0 ? '🎬 فيديو الشرح' : '📝 فيديو الحل والتدريبات')) ?></span>
+                                        </a>
+                                    <?php endforeach; ?>
+                                </div>
+                            </div>
+                        <?php endif; ?>
+
                         <!-- Video Description -->
                         <?php if (!empty($activeVideo['description'])): ?>
                             <div class="text-xs md:text-sm text-slate-600 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">
@@ -698,24 +892,27 @@ html.dark .lesson-active-item {
                             </div>
                         <?php endif; ?>
 
-                        <!-- Lecture Attachments & Files if present in this collection -->
+                        <!-- Lesson Attachments (PDF الملخص) -->
                         <?php if ($activeCollection && !empty($activeCollection['files'])): ?>
-                            <div class="pt-2">
-                                <h4 class="text-xs font-black text-slate-800 dark:text-slate-200 mb-2.5 flex items-center gap-1.5">
-                                    <i class="fa-solid fa-paperclip text-primary"></i> المذكرات والملفات المرفقة مع هذا الدرس:
+                            <div class="pt-3 border-t border-slate-100 dark:border-slate-800">
+                                <h4 class="text-xs font-black text-slate-800 dark:text-slate-200 mb-3 flex items-center gap-1.5">
+                                    <i class="fa-solid fa-file-pdf text-red-500"></i> مذكرات وملخصات الشرح الخاصة بهذا الدرس:
                                 </h4>
                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <?php foreach ($activeCollection['files'] as $f): ?>
-                                        <a href="<?= htmlspecialchars($f['link']) ?>" target="_blank" download class="p-3 rounded-xl border border-slate-200 dark:border-slate-700/80 bg-slate-50 dark:bg-slate-800/60 hover:border-primary transition flex items-center justify-between text-xs group">
+                                        <a href="<?= htmlspecialchars($f['link']) ?>" target="_blank" download class="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700/80 bg-slate-50 dark:bg-slate-800/60 hover:border-primary transition flex items-center justify-between text-xs group shadow-sm">
                                             <div class="flex items-center gap-2.5 min-w-0">
-                                                <div class="w-8 h-8 rounded-lg bg-red-100 dark:bg-red-900/30 text-red-600 flex items-center justify-center shrink-0">
-                                                    <i class="fa-solid fa-file-pdf"></i>
+                                                <div class="w-9 h-9 rounded-xl bg-red-100 dark:bg-red-900/30 text-red-600 flex items-center justify-center shrink-0">
+                                                    <i class="fa-solid fa-file-pdf text-base"></i>
                                                 </div>
-                                                <span class="font-bold text-slate-800 dark:text-slate-200 truncate group-hover:text-primary transition">
-                                                    <?= htmlspecialchars($f['title']) ?>
-                                                </span>
+                                                <div class="min-w-0">
+                                                    <div class="font-bold text-slate-800 dark:text-slate-200 truncate group-hover:text-primary transition">
+                                                        <?= htmlspecialchars($f['title']) ?>
+                                                    </div>
+                                                    <div class="text-[10px] text-slate-400">ملف ملخص الدرس PDF</div>
+                                                </div>
                                             </div>
-                                            <span class="text-[11px] text-primary font-bold flex items-center gap-1 shrink-0">
+                                            <span class="text-[11px] text-primary font-bold flex items-center gap-1 shrink-0 px-3 py-1.5 rounded-lg bg-teal-50 dark:bg-teal-950/60">
                                                 <i class="fa-solid fa-download"></i> تحميل
                                             </span>
                                         </a>
@@ -724,65 +921,203 @@ html.dark .lesson-active-item {
                             </div>
                         <?php endif; ?>
 
+                        <!-- Lesson Quizzes / Exams (امتحان الحصة التدريبي) -->
+                        <?php if ($activeCollection && !empty($activeCollection['quizzes'])): ?>
+                            <div class="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-3">
+                                <h4 class="text-xs font-black text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                                    <i class="fa-solid fa-award text-amber-500"></i> امتحانات وتدريبات هذا الدرس:
+                                </h4>
+                                <?php foreach ($activeCollection['quizzes'] as $qz): 
+                                    $isQuizPassed = in_array($qz['id'], $passedQuizIds);
+                                ?>
+                                    <div class="p-4 rounded-2xl border <?= $isQuizPassed ? 'border-emerald-200 bg-emerald-50/40 dark:border-emerald-900/50 dark:bg-emerald-950/20' : 'border-amber-200 bg-amber-50/40 dark:border-amber-900/50 dark:bg-amber-950/20' ?> flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-10 h-10 rounded-2xl <?= $isQuizPassed ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/50' : 'bg-amber-100 text-amber-600 dark:bg-amber-900/50' ?> flex items-center justify-center text-lg shrink-0">
+                                                <i class="fa-solid <?= $isQuizPassed ? 'fa-circle-check' : 'fa-clipboard-question' ?>"></i>
+                                            </div>
+                                            <div>
+                                                <div class="text-xs sm:text-sm font-black text-slate-900 dark:text-white">
+                                                    <?= htmlspecialchars($qz['title']) ?>
+                                                </div>
+                                                <div class="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-2 mt-0.5">
+                                                    <span><i class="fa-solid fa-clock ml-0.5"></i> <?= (int)$qz['quizTime'] ?> دقيقة</span>
+                                                    <span>•</span>
+                                                    <span class="<?= $isQuizPassed ? 'text-emerald-600 font-bold' : 'text-amber-600 font-bold' ?>">
+                                                        <?= $isQuizPassed ? 'تم اجتياز الامتحان بنجاح ✓' : 'يلزم اجتياز الامتحان لفتح الحصة التالية' ?>
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <a href="/quiz.php?id=<?= urlencode($qz['id']) ?>" class="px-5 py-2.5 rounded-xl <?= $isQuizPassed ? 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200' : 'bg-primary hover:bg-teal-700 text-white shadow-md' ?> font-black text-xs transition flex items-center justify-center gap-1.5 shrink-0">
+                                            <i class="fa-solid <?= $isQuizPassed ? 'fa-eye' : 'fa-pen-to-square' ?>"></i>
+                                            <span><?= $isQuizPassed ? 'مراجعة نتيجة الامتحان' : 'ابدأ امتحان الحصة الآن' ?></span>
+                                        </a>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php endif; ?>
+
                     </div>
 
-                <?php elseif (!$canAccessActiveVideo): ?>
-                    <!-- Unenrolled / Single Lesson Lock Screen -->
+                <?php elseif ($hasSelectedLesson && $activeCollection && !empty($activeCollection['isQuizLocked'])): ?>
+                    <!-- 2. PREREQUISITE QUIZ LOCKED SCREEN -->
+                    <div class="course-card p-8 md:p-14 text-center space-y-6">
+                        <div class="w-20 h-20 rounded-3xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 flex items-center justify-center text-3xl mx-auto shadow-inner border border-amber-200 dark:border-amber-800">
+                            <i class="fa-solid fa-graduation-cap"></i>
+                        </div>
+                        <div class="space-y-2 max-w-lg mx-auto">
+                            <span class="inline-block px-3 py-1 bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 text-xs font-black rounded-full mb-1">
+                                ⚠️ شرط اجتياز الامتحان السابق
+                            </span>
+                            <h2 class="text-xl md:text-2xl font-black text-[#0d3753] dark:text-white">
+                                يلزم اجتياز امتحان الحصة السابقة أولاً
+                            </h2>
+                            <p class="text-xs md:text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+                                للانتقال لحصة <span class="font-bold text-slate-800 dark:text-slate-200">"<?= htmlspecialchars($activeCollection['title']) ?>"</span>، يجب عليك أولاً الحصول على نسبة نجاح (50% على الأقل) في امتحان:  
+                                <strong class="text-primary block text-sm mt-1">"<?= htmlspecialchars($activeCollection['lockingQuiz']['title']) ?>"</strong>
+                            </p>
+                        </div>
+                        <div class="flex items-center justify-center gap-3 pt-2">
+                            <a href="/quiz.php?id=<?= urlencode($activeCollection['lockingQuiz']['id']) ?>" class="px-8 py-3.5 bg-primary hover:bg-teal-700 text-white font-black text-xs rounded-2xl shadow-lg transition flex items-center gap-2">
+                                <i class="fa-solid fa-pen-to-square"></i>
+                                <span>الانتقال لأداء الامتحان الآن</span>
+                            </a>
+                        </div>
+                    </div>
+
+                <?php elseif ($hasSelectedLesson && $activeCollection && !$activeCollection['isPurchased']): ?>
+                    <!-- 3. UNPURCHASED SINGLE LESSON LOCK SCREEN WITH INLINE CODE REDEEM -->
                     <?php 
                         $lessonPrice = (float)($activeCollection['price'] ?? 0);
                         $userWallet = (float)($user['walletBalance'] ?? 0);
                     ?>
                     <div class="course-card p-8 md:p-14 text-center space-y-6">
-                        <div class="w-20 h-20 rounded-full bg-amber-50 dark:bg-amber-950/40 text-gold-custom flex items-center justify-center text-3xl mx-auto shadow-inner border border-amber-200 dark:border-amber-800">
+                        <div class="w-20 h-20 rounded-3xl bg-amber-50 dark:bg-amber-950/40 text-gold-custom flex items-center justify-center text-3xl mx-auto shadow-inner border border-amber-200 dark:border-amber-800">
                             <i class="fa-solid fa-lock"></i>
                         </div>
                         <div class="space-y-2 max-w-lg mx-auto">
                             <span class="inline-block px-3 py-1 bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 text-xs font-black rounded-full mb-1">
-                                🎯 كود حصة / اشتراك درس
+                                🎯 كود حصة / اشتراك درس منفصل
                             </span>
                             <h2 class="text-xl md:text-2xl font-black text-[#0d3753] dark:text-white">
-                                <?= $activeCollection ? 'حصة: ' . htmlspecialchars($activeCollection['title']) : 'المحتوى متاح للمشتركين فقط' ?>
+                                حصة: <?= htmlspecialchars($activeCollection['title']) ?>
                             </h2>
                             <p class="text-xs md:text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-                                هذه الحصة غير مفعلة في حسابك. يمكنك تفعيل كود الحصة المستلم من السنتر، أو دفع قيمة الحصة مباشرة لحضورها ومشاهدة شرحها الآن.
+                                هذه الحصة غير مفعلة بحسابك. يمكنك تفعيل كود الحصة المستلم من السنتر أو الإدارة، أو شراؤها مباشرة لحضورها الآن.
                             </p>
                             <?php if ($lessonPrice > 0): ?>
                                 <div class="pt-2">
-                                    <span class="text-xs text-slate-400 font-bold block">قيمة الحصة المنفصلة:</span>
+                                    <span class="text-xs text-slate-400 font-bold block">سعر الحصة المنفصلة:</span>
                                     <span class="text-2xl font-black text-[#0f766e] font-mono"><?= number_format($lessonPrice, 0) ?> ج.م</span>
                                 </div>
                             <?php endif; ?>
                         </div>
 
+                        <!-- Instant Direct Code Redemption for this Lesson -->
+                        <div class="max-w-md mx-auto bg-slate-50 dark:bg-slate-800/60 p-5 rounded-3xl border border-slate-200 dark:border-slate-700 space-y-3 shadow-inner">
+                            <label class="block text-xs font-black text-slate-700 dark:text-slate-300 text-right">
+                                <i class="fa-solid fa-key text-gold-custom ml-1"></i> تفعيل كود الحصة مباشرة في حسابك:
+                            </label>
+                            <div class="flex gap-2">
+                                <input type="text" id="directLessonCodeInput" placeholder="أدخل كود الحصة (مثال: HSA-XXXXX)" class="flex-1 px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-xl text-xs font-bold font-mono uppercase text-slate-800 dark:text-white outline-none focus:border-primary">
+                                <button type="button" id="directLessonBtn" onclick="redeemDirectLessonCode()" class="px-5 py-2.5 bg-primary hover:bg-teal-700 text-white font-bold text-xs rounded-xl shadow transition shrink-0 flex items-center gap-1.5">
+                                    <i class="fa-solid fa-bolt"></i> تفعيل الحصة
+                                </button>
+                            </div>
+                            <div id="directLessonAlert" class="text-xs font-bold p-3 rounded-xl hidden"></div>
+                        </div>
+
                         <div class="flex flex-wrap items-center justify-center gap-3 pt-2">
-                            <?php if ($user): ?>
-                                <?php if ($activeCollection): ?>
-                                    <a href="/purchase.php?id=<?= urlencode($courseId) ?>&collectionId=<?= urlencode($activeCollection['id']) ?>" class="px-6 py-3 bg-[#c79a32] hover:bg-yellow-500 text-[#0d3753] font-black text-xs rounded-xl shadow-md transition flex items-center gap-2">
-                                        <i class="fa-solid fa-key"></i> تفعيل كود الحصة (<?= number_format($lessonPrice, 0) ?> ج.م)
-                                    </a>
-                                <?php endif; ?>
-
-                                <a href="/purchase.php?id=<?= urlencode($courseId) ?>" class="px-6 py-3 bg-[#0f766e] hover:bg-[#0d3753] text-white font-bold text-xs rounded-xl shadow transition flex items-center gap-2">
-                                    <i class="fa-solid fa-key"></i> أو تفعيل الكورس كاملاً (<?= number_format($course['price'], 0) ?> ج.م)
-                                </a>
-
-                                <a href="https://wa.me/201092037257?text=<?= urlencode('السلام عليكم، أود الحصول على كود تفعيل لكورس: ' . $course['title']) ?>" target="_blank" class="px-5 py-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-bold text-xs rounded-xl transition flex items-center gap-2">
-                                    <i class="fa-brands fa-whatsapp text-emerald-600"></i> طلب كود عبر واتساب
-                                </a>
-                            <?php else: ?>
-                                <a href="/login.php?redirect=<?= urlencode($_SERVER['REQUEST_URI']) ?>" class="px-8 py-3.5 bg-[#0f766e] hover:bg-[#0d3753] text-white font-black text-sm rounded-xl shadow-lg transition flex items-center gap-2">
-                                    <i class="fa-solid fa-right-to-bracket"></i> تسجيل الدخول لحضور الحصة
-                                </a>
+                            <?php if ($user && $userWallet >= $lessonPrice && $lessonPrice > 0): ?>
+                                <button type="button" onclick="payLessonWallet('<?= htmlspecialchars($activeCollection['id']) ?>', '<?= htmlspecialchars(addslashes($activeCollection['title'])) ?>', <?= (float)$lessonPrice ?>)" class="px-6 py-3 bg-[#c79a32] hover:bg-yellow-500 text-[#0d3753] font-black text-xs rounded-xl shadow-md transition flex items-center gap-2">
+                                    <i class="fa-solid fa-wallet"></i> شراء الحصة من رصيد المحفظة (رصيدك: <?= number_format($userWallet, 0) ?> ج.م)
+                                </button>
                             <?php endif; ?>
+
+                            <a href="/purchase.php?id=<?= urlencode($courseId) ?>" class="px-5 py-3 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 font-bold text-xs rounded-xl transition flex items-center gap-2">
+                                <i class="fa-solid fa-graduation-cap"></i> أو تفعيل الكورس كاملاً (<?= number_format($course['price'], 0) ?> ج.م)
+                            </a>
+
+                            <a href="https://wa.me/201092037257?text=<?= urlencode('السلام عليكم، أود الحصول على كود تفعيل لحصة: ' . $activeCollection['title'] . ' في كورس: ' . $course['title']) ?>" target="_blank" class="px-4 py-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-bold text-xs rounded-xl transition flex items-center gap-2">
+                                <i class="fa-brands fa-whatsapp text-emerald-600"></i> طلب كود الحصة عبر واتساب
+                            </a>
                         </div>
                     </div>
 
                 <?php else: ?>
-                    <!-- No videos added yet -->
-                    <div class="course-card p-16 text-center text-slate-500 dark:text-slate-400 space-y-3">
-                        <i class="fa-solid fa-circle-play text-5xl text-slate-300 dark:text-slate-600 mx-auto"></i>
-                        <h3 class="text-lg font-bold">لا توجد فيديوهات مضافة في هذا الكورس بعد</h3>
-                        <p class="text-xs text-slate-400">سيتم إضافة المحتوى قريباً، ترقبوا التحديثات.</p>
+                    <!-- 4. WELCOMING COURSE OVERVIEW (NO LESSON PICKED YET) -->
+                    <div class="course-card p-8 md:p-12 space-y-6">
+                        <div class="text-center max-w-xl mx-auto space-y-2">
+                            <span class="inline-block px-3.5 py-1 bg-teal-100 text-teal-800 dark:bg-teal-900/40 dark:text-teal-300 text-xs font-black rounded-full mb-1">
+                                📚 خريطة وفهرس حصص الكورس
+                            </span>
+                            <h2 class="text-2xl md:text-3xl font-black text-[#0d3753] dark:text-white">
+                                مرحباً بك في <?= htmlspecialchars($course['title']) ?>
+                            </h2>
+                            <p class="text-xs md:text-sm text-slate-500 dark:text-slate-400">
+                                اختر الحصة التي ترغب في حضورها من الحصص المتوفرة أدناه، أو قم بتفعيل كود الحصة للبدء في المشاهدة:
+                            </p>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
+                            <?php foreach ($collections as $cIdx => $cItem): ?>
+                                <div class="p-5 rounded-3xl border <?= $cItem['isUnlocked'] ? 'border-teal-200 bg-teal-50/30 dark:border-teal-900/40 dark:bg-teal-950/20' : 'border-slate-200 bg-slate-50/50 dark:border-slate-800 dark:bg-slate-900/30' ?> flex flex-col justify-between space-y-4 shadow-sm hover:shadow-md transition">
+                                    <div>
+                                        <div class="flex items-center justify-between mb-2.5">
+                                            <span class="w-7 h-7 rounded-full bg-primary text-white flex items-center justify-center text-xs font-black shadow-sm">
+                                                <?= $cIdx + 1 ?>
+                                            </span>
+                                            <?php if ($cItem['isUnlocked']): ?>
+                                                <span class="text-[10px] bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 font-bold px-2.5 py-1 rounded-full flex items-center gap-1">
+                                                    <i class="fa-solid fa-lock-open text-[9px]"></i> مفعلة بحسابك
+                                                </span>
+                                            <?php elseif ($cItem['isQuizLocked']): ?>
+                                                <span class="text-[10px] bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 font-bold px-2.5 py-1 rounded-full flex items-center gap-1">
+                                                    <i class="fa-solid fa-graduation-cap text-[9px]"></i> مقفلة بامتحان
+                                                </span>
+                                            <?php else: ?>
+                                                <span class="text-[10px] bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 font-bold px-2.5 py-1 rounded-full flex items-center gap-1">
+                                                    <i class="fa-solid fa-lock text-[9px]"></i> <?= (float)$cItem['price'] > 0 ? number_format($cItem['price'], 0) . ' ج.م' : 'مغلقة' ?>
+                                                </span>
+                                            <?php endif; ?>
+                                        </div>
+                                        <h3 class="text-sm font-black text-slate-900 dark:text-white">
+                                            <?= htmlspecialchars($cItem['title']) ?>
+                                        </h3>
+                                        <div class="flex flex-wrap items-center gap-2 text-[10px] text-slate-400 font-bold mt-2.5">
+                                            <span><i class="fa-solid fa-film ml-0.5"></i> <?= count($cItem['videos']) ?> فيديوهات</span>
+                                            <?php if (!empty($cItem['files'])): ?>
+                                                <span>•</span>
+                                                <span><i class="fa-solid fa-file-pdf ml-0.5 text-red-500"></i> ملخص PDF</span>
+                                            <?php endif; ?>
+                                            <?php if (!empty($cItem['quizzes'])): ?>
+                                                <span>•</span>
+                                                <span class="text-amber-600 dark:text-amber-400"><i class="fa-solid fa-award ml-0.5"></i> امتحان الحصة</span>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <?php if ($cItem['isUnlocked']): ?>
+                                            <a href="/course.php?id=<?= urlencode($courseId) ?>&col=<?= urlencode($cItem['id']) ?>" class="w-full py-2.5 rounded-xl bg-primary hover:bg-teal-700 text-white text-xs font-black transition flex items-center justify-center gap-1.5 shadow-sm">
+                                                <i class="fa-solid fa-play text-[10px]"></i>
+                                                <span>مشاهدة محتوى الحصة</span>
+                                            </a>
+                                        <?php elseif ($cItem['isQuizLocked']): ?>
+                                            <a href="/quiz.php?id=<?= urlencode($cItem['lockingQuiz']['id']) ?>" class="w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-black transition flex items-center justify-center gap-1.5 shadow-sm">
+                                                <i class="fa-solid fa-pen-to-square text-[10px]"></i>
+                                                <span>أداء امتحان الحصة السابقة أولاً</span>
+                                            </a>
+                                        <?php else: ?>
+                                            <a href="/course.php?id=<?= urlencode($courseId) ?>&col=<?= urlencode($cItem['id']) ?>" class="w-full py-2.5 rounded-xl bg-[#c79a32] hover:bg-yellow-500 text-[#0d3753] text-xs font-black transition flex items-center justify-center gap-1.5 shadow-sm">
+                                                <i class="fa-solid fa-key text-[10px]"></i>
+                                                <span>تفعيل كود الحصة (<?= number_format($cItem['price'], 0) ?> ج.م)</span>
+                                            </a>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
                     </div>
                 <?php endif; ?>
 
@@ -802,7 +1137,7 @@ html.dark .lesson-active-item {
                         </span>
                     </div>
 
-                    <?php if ($canAccess && $totalVideosCount > 0): ?>
+                    <?php if ($canAccess && $totalVideosCount > 0 && $activeVideoIndex >= 0): ?>
                         <span class="text-[11px] font-black bg-teal-100 text-teal-800 dark:bg-teal-900/40 dark:text-teal-300 px-2.5 py-1 rounded-lg">
                             <?= ($activeVideoIndex + 1) ?> / <?= $totalVideosCount ?>
                         </span>
@@ -817,44 +1152,45 @@ html.dark .lesson-active-item {
                         <?php foreach ($collections as $idx => $col): 
                             $isColActive = ($activeCollection && $activeCollection['id'] === $col['id']);
                         ?>
-                            <div class="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden bg-slate-50/50 dark:bg-slate-900/40 transition">
+                            <div class="border <?= $isColActive ? 'border-primary dark:border-teal-500' : 'border-slate-200 dark:border-slate-800' ?> rounded-2xl overflow-hidden bg-slate-50/50 dark:bg-slate-900/40 transition">
                                 
                                 <!-- Collection Header -->
-                                <div class="p-3.5 bg-slate-100 dark:bg-slate-800/80 font-black text-xs text-[#0d3753] dark:text-white flex items-center justify-between">
-                                    <div class="flex items-center gap-2">
-                                        <span class="w-5 h-5 rounded-full bg-primary text-white flex items-center justify-center text-[10px]">
+                                <a href="/course.php?id=<?= urlencode($courseId) ?>&col=<?= urlencode($col['id']) ?>" class="p-3.5 bg-slate-100 dark:bg-slate-800/80 font-black text-xs text-[#0d3753] dark:text-white flex items-center justify-between block hover:bg-slate-200/80 transition">
+                                    <div class="flex items-center gap-2 min-w-0">
+                                        <span class="w-5 h-5 rounded-full <?= $isColActive ? 'bg-primary' : 'bg-slate-400 dark:bg-slate-600' ?> text-white flex items-center justify-center text-[10px] shrink-0">
                                             <?= ($idx + 1) ?>
                                         </span>
-                                        <span><?= htmlspecialchars($col['title']) ?></span>
+                                        <span class="truncate"><?= htmlspecialchars($col['title']) ?></span>
                                     </div>
-                                    <div class="flex items-center gap-1.5">
+                                    <div class="flex items-center gap-1.5 shrink-0">
                                         <?php if ($col['isUnlocked']): ?>
                                             <span class="text-[10px] bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
                                                 <i class="fa-solid fa-lock-open text-[9px]"></i> مفعلة
+                                            </span>
+                                        <?php elseif ($col['isQuizLocked']): ?>
+                                            <span class="text-[10px] bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-300 font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                                                <i class="fa-solid fa-lock text-[9px]"></i> باختبار
                                             </span>
                                         <?php else: ?>
                                             <span class="text-[10px] bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
                                                 <i class="fa-solid fa-lock text-[9px]"></i> <?= (float)$col['price'] > 0 ? number_format($col['price'], 0) . ' ج.م' : 'مغلقة' ?>
                                             </span>
                                         <?php endif; ?>
-                                        <span class="text-[10px] bg-white dark:bg-slate-700 px-2 py-0.5 rounded text-slate-500 dark:text-slate-300 font-bold">
-                                            <?= count($col['videos']) ?> حصص
-                                        </span>
                                     </div>
-                                </div>
+                                </a>
 
                                 <!-- Collection Items (Videos, Files, Quizzes) -->
                                 <div class="divide-y divide-slate-200/60 dark:divide-slate-800/60 p-1.5 space-y-1">
                                     
                                     <!-- Videos -->
-                                    <?php foreach ($col['videos'] as $v): 
+                                    <?php foreach ($col['videos'] as $vIdx => $v): 
                                         $isActive = ($activeVideo && $activeVideo['id'] === $v['id']);
                                     ?>
                                         <a href="/course.php?id=<?= urlencode($courseId) ?>&v=<?= urlencode($v['id']) ?>" 
                                            class="p-2.5 rounded-xl flex items-center justify-between text-xs transition block <?= $isActive ? 'lesson-active-item' : 'hover:bg-white dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium' ?>">
-                                            <div class="flex items-center gap-2.5 min-w-0">
-                                                <i class="fa-solid <?= $isActive ? 'fa-circle-play text-primary' : ($col['isUnlocked'] ? 'fa-play text-emerald-500' : 'fa-lock text-slate-400') ?> text-xs shrink-0"></i>
-                                                <span class="truncate"><?= htmlspecialchars($v['title']) ?></span>
+                                            <div class="flex items-center gap-2 min-w-0">
+                                                <i class="fa-solid <?= $isActive ? 'fa-circle-play text-primary' : ($col['isUnlocked'] ? ($vIdx === 0 ? 'fa-play text-emerald-500' : 'fa-pen-to-square text-teal-600') : 'fa-lock text-slate-400') ?> text-xs shrink-0"></i>
+                                                <span class="truncate"><?= htmlspecialchars($v['title'] ?: ($vIdx === 0 ? 'فيديو الشرح' : 'فيديو الحل')) ?></span>
                                             </div>
                                             <?php if ($isActive): ?>
                                                 <span class="text-[10px] text-primary dark:text-teal-400 font-black shrink-0 mr-2 flex items-center gap-1">
@@ -884,16 +1220,18 @@ html.dark .lesson-active-item {
 
                                     <!-- Quizzes -->
                                     <?php if (!empty($col['quizzes'])): ?>
-                                        <?php foreach ($col['quizzes'] as $q): ?>
-                                            <div class="p-2 rounded-xl flex items-center justify-between text-xs text-slate-600 dark:text-slate-400 bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200/50 dark:border-amber-800/30">
+                                        <?php foreach ($col['quizzes'] as $q): 
+                                            $isQzPassed = in_array($q['id'], $passedQuizIds);
+                                        ?>
+                                            <a href="/quiz.php?id=<?= urlencode($q['id']) ?>" class="p-2 rounded-xl flex items-center justify-between text-xs text-slate-600 dark:text-slate-400 bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200/50 dark:border-amber-800/30 hover:border-amber-400 transition block">
                                                 <div class="flex items-center gap-2 min-w-0">
-                                                    <i class="fa-solid fa-clipboard-question text-amber-500 text-sm shrink-0"></i>
+                                                    <i class="fa-solid <?= $isQzPassed ? 'fa-circle-check text-emerald-500' : 'fa-award text-amber-500' ?> text-sm shrink-0"></i>
                                                     <span class="truncate font-bold text-amber-800 dark:text-amber-300"><?= htmlspecialchars($q['title']) ?></span>
                                                 </div>
-                                                <span class="text-[10px] text-amber-600 dark:text-amber-400 font-bold shrink-0 mr-2">
-                                                    <?= $q['quizTime'] ?> دقيقة
+                                                <span class="text-[10px] <?= $isQzPassed ? 'text-emerald-600' : 'text-amber-600 dark:text-amber-400' ?> font-bold shrink-0 mr-2">
+                                                    <?= $isQzPassed ? 'تم الاجتياز ✓' : ($q['quizTime'] . ' دقيقة') ?>
                                                 </span>
-                                            </div>
+                                            </a>
                                         <?php endforeach; ?>
                                     <?php endif; ?>
 
@@ -1055,6 +1393,97 @@ async function handleRedeemCode(e) {
         btn.innerHTML = '<span>تأكيد وشحن الكود</span>';
     }
 }
+
+// Direct Lesson Code Redemption (From lesson lock card)
+async function redeemDirectLessonCode() {
+    const input = document.getElementById('directLessonCodeInput');
+    const alertBox = document.getElementById('directLessonAlert');
+    const btn = document.getElementById('directLessonBtn');
+    if (!input || !btn || !alertBox) return;
+
+    const code = input.value.trim();
+    if (!code) {
+        alertBox.className = 'text-xs font-bold p-3 rounded-xl bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 block';
+        alertBox.textContent = 'يرجى إدخال كود الحصة أولاً.';
+        return;
+    }
+
+    btn.disabled = true;
+    const origHtml = btn.innerHTML;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin ml-1"></i> جاري التفعيل...';
+    alertBox.className = 'text-xs font-bold p-3 rounded-xl hidden';
+
+    try {
+        const res = await fetch('/api/custom.php?action=redeem-course-code', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code: code })
+        });
+        const data = await res.json();
+        if (data.success) {
+            alertBox.className = 'text-xs font-bold p-3 rounded-xl bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 block';
+            alertBox.textContent = data.message || 'تم تفعيل الحصة بنجاح! جاري التحديث...';
+            setTimeout(() => {
+                window.location.reload();
+            }, 1200);
+        } else {
+            alertBox.className = 'text-xs font-bold p-3 rounded-xl bg-red-100 text-red-800 dark:bg-red-950/60 dark:text-red-300 block';
+            alertBox.textContent = data.error || 'الكود غير صحيح أو مستخدم مسبقاً.';
+            btn.disabled = false;
+            btn.innerHTML = origHtml;
+        }
+    } catch(err) {
+        alertBox.className = 'text-xs font-bold p-3 rounded-xl bg-red-100 text-red-800 dark:bg-red-950/60 dark:text-red-300 block';
+        alertBox.textContent = 'حدث خطأ في الاتصال بالخادم، يرجى المحاولة ثانية.';
+        btn.disabled = false;
+        btn.innerHTML = origHtml;
+    }
+}
+
+// Secure Fullscreen Toggler (Leaves watermarks and anti-piracy shield strictly on top)
+function toggleSecureFullscreen() {
+    const wrapper = document.getElementById('secure-player-wrapper');
+    if (!wrapper) return;
+
+    if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.mozFullScreenElement && !document.msFullscreenElement) {
+        if (wrapper.requestFullscreen) {
+            wrapper.requestFullscreen().catch(err => console.error(err));
+        } else if (wrapper.webkitRequestFullscreen) {
+            wrapper.webkitRequestFullscreen();
+        } else if (wrapper.mozRequestFullScreen) {
+            wrapper.mozRequestFullScreen();
+        } else if (wrapper.msRequestFullscreen) {
+            wrapper.msRequestFullscreen();
+        }
+    } else {
+        if (document.exitFullscreen) {
+            document.exitFullscreen().catch(err => console.error(err));
+        } else if (document.webkitExitFullscreen) {
+            document.webkitExitFullscreen();
+        } else if (document.mozCancelFullScreen) {
+            document.mozCancelFullScreen();
+        } else if (document.msExitFullscreen) {
+            document.msExitFullscreen();
+        }
+    }
+}
+
+function updateFullscreenBtnState() {
+    const btn = document.getElementById('secureFullscreenBtn');
+    if (!btn) return;
+    const isFull = !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
+    if (isFull) {
+        btn.innerHTML = '<i class="fa-solid fa-compress ml-1"></i><span class="hidden sm:inline">إنهاء الشاشة الكاملة</span>';
+        btn.setAttribute('title', 'إنهاء الشاشة الكاملة');
+    } else {
+        btn.innerHTML = '<i class="fa-solid fa-expand ml-1"></i><span class="hidden sm:inline">شاشة كاملة</span>';
+        btn.setAttribute('title', 'شاشة كاملة آمنة');
+    }
+}
+
+['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'MSFullscreenChange'].forEach(function(evt) {
+    document.addEventListener(evt, updateFullscreenBtnState);
+});
 
 // ==============================================================
 // Advanced Anti-Piracy, Dynamic Forensic Watermark & Anti-Recording Shield

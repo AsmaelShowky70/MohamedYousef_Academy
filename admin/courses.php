@@ -553,9 +553,21 @@ function openLessonsManager(courseId, courseTitle) {
                         </span>
                     </div>
                 </div>
-                <div class="flex items-center gap-2 self-end sm:self-center">
-                    <button type="button" onclick="editLessonInline('${col.id}', '${col.title.replace(/'/g, "\\'")}', '${col.price || 70}', '${col.order || (idx + 1)}')" class="px-3 py-1 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg text-xs font-bold transition cursor-pointer">
-                        تعديل السعر / الاسم
+                <div class="flex flex-wrap items-center gap-1.5 self-end sm:self-center">
+                    <a href="/admin/content.php?cType=QUIZ&courseId=${courseId}&collectionId=${col.id}" class="px-2.5 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 rounded-lg text-xs font-black transition flex items-center gap-1 shadow-sm" title="إضافة امتحان وتدريب لهذه الحصة">
+                        <i class="fa-solid fa-award text-amber-600"></i>
+                        <span>+ امتحان</span>
+                    </a>
+                    <a href="/admin/content.php?cType=VIDEO&courseId=${courseId}&collectionId=${col.id}" class="px-2.5 py-1 bg-teal-100 hover:bg-teal-200 text-teal-900 border border-teal-300 rounded-lg text-xs font-black transition flex items-center gap-1 shadow-sm" title="إضافة فيديو شرح أو حل لهذه الحصة">
+                        <i class="fa-solid fa-film text-teal-600"></i>
+                        <span>+ فيديو</span>
+                    </a>
+                    <a href="/admin/content.php?cType=FILE&courseId=${courseId}&collectionId=${col.id}" class="px-2.5 py-1 bg-red-100 hover:bg-red-200 text-red-900 border border-red-300 rounded-lg text-xs font-black transition flex items-center gap-1 shadow-sm" title="إضافة ملخص PDF لهذه الحصة">
+                        <i class="fa-solid fa-file-pdf text-red-600"></i>
+                        <span>+ ملخص PDF</span>
+                    </a>
+                    <button type="button" onclick="editLessonInline('${col.id}', '${col.title.replace(/'/g, "\\'")}', '${col.price || 70}', '${col.order || (idx + 1)}')" class="px-2.5 py-1 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg text-xs font-bold transition cursor-pointer">
+                        تعديل
                     </button>
                     <a href="courses.php?action=delete_lesson&lessonId=${col.id}" onclick="return confirm('هل تريد حذف هذه الحصة؟')" class="px-2 py-1 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-xs font-bold transition">
                         حذف

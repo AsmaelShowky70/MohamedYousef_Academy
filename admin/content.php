@@ -606,17 +606,29 @@ function applyFilters() {
     window.location.href = 'content.php?' + params.toString();
 }
 
-function openAddContentModal() {
-    document.getElementById('modalTitle').textContent = 'إضافة محتوى جديد إلى الكورس';
+function openAddContentModal(cType = 'VIDEO', courseId = null, collectionId = null) {
+    document.getElementById('modalTitle').textContent = cType === 'QUIZ' ? 'إضافة امتحان وتدريب جديد للحصة' : (cType === 'FILE' ? 'إضافة ملخص ومذكرة PDF للحصة' : 'إضافة فيديو جديد للحصة');
     document.getElementById('formEditId').value = '';
     document.getElementById('contentTitle').value = '';
     document.getElementById('contentDescription').value = '';
     document.getElementById('videoLinkInput').value = '';
     document.getElementById('fileLinkInput').value = '';
     document.getElementById('publishedCheckbox').checked = true;
-    document.getElementById('modalContentType').value = 'VIDEO';
+    document.getElementById('modalContentType').value = cType || 'VIDEO';
     onContentTypeChange();
     setVideoSource('YOUTUBE');
+
+    if (courseId) {
+        const cSel = document.getElementById('modalCourseSelect');
+        if (cSel) {
+            cSel.value = courseId;
+            onCourseChange();
+            if (collectionId) {
+                const colSel = document.getElementById('modalCollectionSelect');
+                if (colSel) colSel.value = collectionId;
+            }
+        }
+    }
 
     // Reset questions
     document.getElementById('questionsContainer').innerHTML = '';
@@ -814,6 +826,19 @@ function toggleQuestionType(idx, type) {
         wrDiv.classList.remove('hidden');
     }
 }
+
+// Auto-open add modal if invoked with quick query parameters from courses.php
+document.addEventListener('DOMContentLoaded', function() {
+    const params = new URLSearchParams(window.location.search);
+    const reqType = params.get('cType');
+    const reqCourse = params.get('courseId');
+    const reqCol = params.get('collectionId');
+    if (reqType || reqCourse || reqCol) {
+        setTimeout(function() {
+            openAddContentModal(reqType || 'VIDEO', reqCourse, reqCol);
+        }, 150);
+    }
+});
 </script>
 
 <?php require_once __DIR__ . '/footer.php'; ?>

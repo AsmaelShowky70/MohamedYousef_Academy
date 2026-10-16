@@ -4,12 +4,13 @@ $adminUser = requireAdmin();
 requireAdminPermission('codes');
 $db = getDB();
 
+$yearFilter = $_GET['yearId'] ?? '';
 $courseFilter = $_GET['courseId'] ?? '';
 $typeFilter = $_GET['type'] ?? 'ALL';
 $q = trim($_GET['q'] ?? '');
 
 $sql = "
-    SELECT cc.*, c.title AS courseTitle, col.title AS collectionTitle, col.price AS collectionPrice,
+    SELECT cc.*, c.title AS courseTitle, y.name AS yearName, col.title AS collectionTitle, col.price AS collectionPrice,
            u.fullName AS studentName, u.phone AS studentPhone,
            (SELECT CONCAT(IFNULL(deviceType,'pc'), ' | ', IFNULL(os,''), ' | ', IFNULL(browser,'')) 
             FROM Device 
@@ -17,11 +18,16 @@ $sql = "
             LIMIT 1) as boundDeviceInfo
     FROM CourseCode cc
     LEFT JOIN Course c ON cc.courseId = c.id
+    LEFT JOIN Year y ON c.yearId = y.id
     LEFT JOIN Collection col ON cc.collectionId = col.id
     LEFT JOIN User u ON cc.userId = u.id
     WHERE 1=1
 ";
 $params = [];
+if ($yearFilter) {
+    $sql .= " AND c.yearId = ?";
+    $params[] = $yearFilter;
+}
 if ($courseFilter) {
     $sql .= " AND cc.courseId = ?";
     $params[] = $courseFilter;
@@ -49,15 +55,16 @@ if (isset($_GET['export']) && $_GET['export'] === 'excel') {
     header('Content-Disposition: attachment; filename="platform_codes_' . date('Y-m-d_His') . '.csv"');
     $out = fopen('php://output', 'w');
     fprintf($out, chr(0xEF).chr(0xBB).chr(0xBF));
-    fputcsv($out, ['الكود', 'النوع', 'الكورس / الحصة', 'تاريخ الانتهاء', 'حالة الاستخدام', 'اسم الطالب', 'رقم الهاتف', 'الجهاز المستخدم']);
+    fputcsv($out, ['الكود', 'النوع', 'الصف الدراسي', 'الكورس', 'الحصة المحددة', 'تاريخ الانتهاء', 'حالة الاستخدام', 'اسم الطالب', 'رقم الهاتف', 'الجهاز المستخدم']);
     foreach ($codes as $cd) {
         $typeStr = !empty($cd['collectionId']) ? 'حصة فردية' : 'كورس كامل';
-        $itemTitle = !empty($cd['collectionTitle']) ? ($cd['collectionTitle'] . ' (' . ($cd['courseTitle'] ?? '') . ')') : ($cd['courseTitle'] ?? '---');
         $statusStr = (strtotime($cd['expires']) < time()) ? 'منتهي' : (!empty($cd['userId']) ? 'مفعل ومستخدم' : 'جاهز للاستخدام');
         fputcsv($out, [
             $cd['code'],
             $typeStr,
-            $itemTitle,
+            $cd['yearName'] ?: 'غير محدد',
+            $cd['courseTitle'] ?: '---',
+            $cd['collectionTitle'] ?: '---',
             substr($cd['expires'], 0, 10),
             $statusStr,
             $cd['studentName'] ?: '---',
@@ -73,8 +80,15 @@ $adminTitle = "أكواد وكروت الاشتراك والحصص";
 $activeAdminNav = "codes";
 require_once __DIR__ . '/header.php';
 
-$courses = $db->query("SELECT id, title, price FROM Course ORDER BY `order` ASC")->fetchAll();
+$years = $db->query("SELECT id, name FROM Year ORDER BY `order` ASC")->fetchAll();
+$courses = $db->query("SELECT id, title, price, yearId FROM Course ORDER BY `order` ASC")->fetchAll();
 $allCollections = $db->query("SELECT id, title, price, courseId FROM Collection ORDER BY `order` ASC")->fetchAll();
+
+$coursesByYear = [];
+foreach ($courses as $c) {
+    $yId = $c['yearId'] ?: 'other';
+    $coursesByYear[$yId][] = $c;
+}
 
 $collectionsByCourse = [];
 foreach ($allCollections as $col) {
@@ -112,12 +126,23 @@ foreach ($allCollections as $col) {
                 </div>
             </div>
 
+            <!-- Year (Grade) Selection -->
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">الصف الدراسي *</label>
+                <select id="batchYearId" onchange="onYearSelected()" required class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-800 outline-none focus:border-[#0f766e]">
+                    <option value="">جميع الصفوف أو اختر الصف...</option>
+                    <?php foreach ($years as $y): ?>
+                        <option value="<?= htmlspecialchars($y['id']) ?>"><?= htmlspecialchars($y['name']) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+
             <!-- Course Selection -->
             <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1">اختر الكورس *</label>
                 <select id="batchCourseId" onchange="onCourseSelected()" required class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-800 outline-none focus:border-[#0f766e]">
                     <?php foreach ($courses as $c): ?>
-                        <option value="<?= htmlspecialchars($c['id']) ?>"><?= htmlspecialchars($c['title']) ?></option>
+                        <option value="<?= htmlspecialchars($c['id']) ?>" data-year="<?= htmlspecialchars($c['yearId'] ?? '') ?>"><?= htmlspecialchars($c['title']) ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
@@ -171,7 +196,7 @@ foreach ($allCollections as $col) {
                     <h3 class="text-base font-black text-navy-custom">الأكواد المسجلة بالنظام (<?= count($codes) ?>)</h3>
                     <p class="text-xs text-slate-400">تتبع الأكواد، الجهاز المرتبط لكل كود، والبحث بالاسم أو الهاتف أو الكود</p>
                 </div>
-                <a href="?export=excel&type=<?= urlencode($typeFilter) ?>&courseId=<?= urlencode($courseFilter) ?>&q=<?= urlencode($q) ?>" class="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition shadow-sm w-fit">
+                <a href="?export=excel&type=<?= urlencode($typeFilter) ?>&yearId=<?= urlencode($yearFilter) ?>&courseId=<?= urlencode($courseFilter) ?>&q=<?= urlencode($q) ?>" class="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition shadow-sm w-fit">
                     <i class="fa-solid fa-file-excel"></i>
                     <span>تحميل كملف إكسيل (Excel)</span>
                 </a>
@@ -189,6 +214,13 @@ foreach ($allCollections as $col) {
                     <option value="LESSON" <?= $typeFilter === 'LESSON' ? 'selected' : '' ?>>🎯 حصص فردية</option>
                 </select>
 
+                <select name="yearId" onchange="this.form.submit()" class="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none">
+                    <option value="">جميع الصفوف</option>
+                    <?php foreach ($years as $y): ?>
+                        <option value="<?= htmlspecialchars($y['id']) ?>" <?= $yearFilter === $y['id'] ? 'selected' : '' ?>><?= htmlspecialchars($y['name']) ?></option>
+                    <?php endforeach; ?>
+                </select>
+
                 <select name="courseId" onchange="this.form.submit()" class="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none">
                     <option value="">جميع الكورسات</option>
                     <?php foreach ($courses as $c): ?>
@@ -200,7 +232,7 @@ foreach ($allCollections as $col) {
                     بحث
                 </button>
 
-                <?php if ($q !== '' || $courseFilter !== '' || $typeFilter !== 'ALL'): ?>
+                <?php if ($q !== '' || $yearFilter !== '' || $courseFilter !== '' || $typeFilter !== 'ALL'): ?>
                     <a href="/admin/codes.php" class="p-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-slate-600 transition" title="إلغاء الفلترة">
                         <i class="fa-solid fa-xmark"></i>
                     </a>
@@ -214,7 +246,7 @@ foreach ($allCollections as $col) {
                     <tr>
                         <th class="p-3.5">الكود</th>
                         <th class="p-3.5">النوع / المحتوى</th>
-                        <th class="p-3.5">الكورس</th>
+                        <th class="p-3.5">الصف / الكورس</th>
                         <th class="p-3.5">الطالب المفعل</th>
                         <th class="p-3.5">الجهاز المرتبط</th>
                         <th class="p-3.5">الحالة</th>
@@ -246,7 +278,12 @@ foreach ($allCollections as $col) {
                                         </span>
                                     <?php endif; ?>
                                 </td>
-                                <td class="p-3.5 font-semibold text-slate-700"><?= htmlspecialchars($cd['courseTitle'] ?? '---') ?></td>
+                                <td class="p-3.5">
+                                    <span class="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-bold block mb-1 w-fit">
+                                        <?= htmlspecialchars($cd['yearName'] ?? 'عام') ?>
+                                    </span>
+                                    <span class="font-semibold text-slate-800 block"><?= htmlspecialchars($cd['courseTitle'] ?? '---') ?></span>
+                                </td>
                                 <td class="p-3.5">
                                     <?php if ($isUsed): ?>
                                         <span class="font-bold text-teal-800 block"><?= htmlspecialchars($cd['studentName'] ?? '') ?></span>
@@ -347,9 +384,30 @@ foreach ($allCollections as $col) {
 </div>
 
 <script>
+const coursesByYear = <?= json_encode($coursesByYear, JSON_UNESCAPED_UNICODE) ?>;
+const allCourses = <?= json_encode($courses, JSON_UNESCAPED_UNICODE) ?>;
 const collectionsByCourse = <?= json_encode($collectionsByCourse, JSON_UNESCAPED_UNICODE) ?>;
 let latestBatchCodes = [];
 let latestBatchMeta = {};
+
+function onYearSelected() {
+    const yearId = document.getElementById('batchYearId').value;
+    const courseSelect = document.getElementById('batchCourseId');
+    courseSelect.innerHTML = '';
+
+    const list = yearId ? (coursesByYear[yearId] || []) : allCourses;
+    if (list.length === 0) {
+        courseSelect.innerHTML = '<option value="">لا توجد كورسات مضافة لهذا الصف</option>';
+    } else {
+        list.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c.id;
+            opt.textContent = c.title;
+            courseSelect.appendChild(opt);
+        });
+    }
+    onCourseSelected();
+}
 
 function onTargetTypeChange() {
     const isLesson = document.querySelector('input[name="targetType"]:checked').value === 'LESSON';
@@ -423,8 +481,15 @@ function submitBatch(e) {
     const courseId = document.getElementById('batchCourseId').value;
     const collectionId = isLesson ? document.getElementById('batchCollectionId').value : null;
 
+    if (!courseId) {
+        showToast('يرجى اختيار الكورس أولاً', 'error');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-print"></i> توليد الكروت فوراً';
+        return;
+    }
+
     if (isLesson && !collectionId) {
-        showToast('يرجى اختيار الحصة أولاً', 'error');
+        showToast('يرجى اختيار الحصة المحددة أولاً', 'error');
         btn.disabled = false;
         btn.innerHTML = '<i class="fa-solid fa-print"></i> توليد الكروت فوراً';
         return;
@@ -453,6 +518,7 @@ function submitBatch(e) {
             showToast(data.message, 'success');
             latestBatchCodes = data.codes || [];
             latestBatchMeta = {
+                yearTitle: document.getElementById('batchYearId').selectedOptions[0]?.text || '',
                 courseTitle: document.getElementById('batchCourseId').selectedOptions[0]?.text || '',
                 collectionTitle: data.collectionTitle || '',
                 isLesson: isLesson,
@@ -476,9 +542,10 @@ function openPrintModal() {
     const summary = document.getElementById('vouchersSummaryText');
     const cardsArea = document.getElementById('printableCardsArea');
 
+    const yearPrefix = (latestBatchMeta.yearTitle && !latestBatchMeta.yearTitle.includes('جميع')) ? `[${latestBatchMeta.yearTitle}] ` : '';
     summary.textContent = latestBatchMeta.isLesson
-        ? `كروت حضور حصة: ${latestBatchMeta.collectionTitle} (${latestBatchMeta.courseTitle}) - عدد: ${latestBatchCodes.length}`
-        : `كروت اشتراك كورس: ${latestBatchMeta.courseTitle} - عدد: ${latestBatchCodes.length}`;
+        ? `كروت حصة: ${yearPrefix}${latestBatchMeta.collectionTitle} (${latestBatchMeta.courseTitle}) - عدد: ${latestBatchCodes.length}`
+        : `كروت كورس: ${yearPrefix}${latestBatchMeta.courseTitle} - عدد: ${latestBatchCodes.length}`;
 
     cardsArea.innerHTML = '';
     latestBatchCodes.forEach(code => {
@@ -486,9 +553,9 @@ function openPrintModal() {
         card.className = 'border-2 border-dashed border-slate-300 rounded-2xl p-4 bg-slate-50 flex flex-col justify-between text-center space-y-2';
         card.innerHTML = `
             <div class="border-b border-slate-200 pb-2">
-                <div class="text-[10px] font-bold text-slate-400">منصة الأستاذ محمد يوسف التعليمية</div>
+                <div class="text-[10px] font-bold text-slate-400">منصة الأستاذ محمد يوسف التعليمية ${yearPrefix ? '• ' + yearPrefix : ''}</div>
                 <div class="text-xs font-black text-navy-custom mt-0.5">
-                    ${latestBatchMeta.isLesson ? ('🎯 كارت حضور حصة: ' + latestBatchMeta.collectionTitle) : ('🎓 كارت اشتراك: ' + latestBatchMeta.courseTitle)}
+                    ${latestBatchMeta.isLesson ? ('🎯 كارت حصة: ' + latestBatchMeta.collectionTitle + ' (' + latestBatchMeta.courseTitle + ')') : ('🎓 كارت اشتراك: ' + latestBatchMeta.courseTitle)}
                 </div>
             </div>
             <div class="py-2">
@@ -527,11 +594,13 @@ function exportBatchToExcel() {
         showToast('لا توجد أكواد لتصديرها', 'error');
         return;
     }
-    let csvContent = "\uFEFFالكود,النوع,المحتوى,فترة الصلاحية (أيام),مرات الدخول المسموحة\n";
+    let csvContent = "\uFEFFالكود,النوع,الصف الدراسي,الكورس,الحصة المحددة,فترة الصلاحية (أيام),مرات الدخول المسموحة\n";
     const typeTitle = latestBatchMeta.isLesson ? "حصة فردية" : "كورس كامل";
-    const contentTitle = latestBatchMeta.isLesson ? latestBatchMeta.collectionTitle : latestBatchMeta.courseTitle;
+    const yearTitle = latestBatchMeta.yearTitle || "";
+    const courseTitle = latestBatchMeta.courseTitle || "";
+    const lessonTitle = latestBatchMeta.isLesson ? latestBatchMeta.collectionTitle : "كامل الكورس";
     latestBatchCodes.forEach(code => {
-        csvContent += `"${code}","${typeTitle}","${(contentTitle || '').replace(/"/g, '""')}","${latestBatchMeta.days}","${latestBatchMeta.accessTimes}"\n`;
+        csvContent += `"${code}","${typeTitle}","${yearTitle.replace(/"/g, '""')}","${courseTitle.replace(/"/g, '""')}","${lessonTitle.replace(/"/g, '""')}","${latestBatchMeta.days}","${latestBatchMeta.accessTimes}"\n`;
     });
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -546,6 +615,7 @@ function exportBatchToExcel() {
 
 function printVouchers() {
     const printWindow = window.open('', '', 'width=800,height=600');
+    const yearPrefix = (latestBatchMeta.yearTitle && !latestBatchMeta.yearTitle.includes('جميع')) ? ` - ${latestBatchMeta.yearTitle}` : '';
     printWindow.document.write(`
         <!DOCTYPE html>
         <html lang="ar" dir="rtl">
@@ -565,17 +635,28 @@ function printVouchers() {
         </head>
         <body>
             <div style="text-align:center;margin-bottom:15px;">
-                <h2 style="margin:0;">منصة الأستاذ محمد يوسف التعليمية</h2>
-                <p style="margin:4px 0;font-size:12px;">${latestBatchMeta.isLesson ? ('كروت حضور حصة: ' + latestBatchMeta.collectionTitle) : ('كروت كورس: ' + latestBatchMeta.courseTitle)}</p>
+                <h2 style="margin:0;">منصة الأستاذ محمد يوسف التعليمية ${yearPrefix}</h2>
+                <p style="margin:4px 0;font-size:12px;">${latestBatchMeta.isLesson ? ('كروت حضور حصة: ' + latestBatchMeta.collectionTitle + ' (' + latestBatchMeta.courseTitle + ')') : ('كروت كورس: ' + latestBatchMeta.courseTitle)}</p>
             </div>
             <div class="grid">
                 ${latestBatchCodes.map(c => `
                     <div class="card">
-                        <div class="header">منصة الأستاذ محمد يوسف</div>
-                        <div class="title">${latestBatchMeta.isLesson ? ('كارت حضور حصة: ' + latestBatchMeta.collectionTitle) : ('كارت كورس: ' + latestBatchMeta.courseTitle)}</div>
+                        <div class="header">منصة الأستاذ محمد يوسف ${yearPrefix}</div>
+                        <div class="title">${latestBatchMeta.isLesson ? ('كارت حضور حصة: ' + latestBatchMeta.collectionTitle + ' - ' + latestBatchMeta.courseTitle) : ('كارت كورس: ' + latestBatchMeta.courseTitle)}</div>
                         <div class="code-box">${c}</div>
                         <div class="meta">
                             <span>الصلاحية: ${latestBatchMeta.days} يوم</span>
+                            <span>الدخول: ${latestBatchMeta.accessTimes} مرات</span>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+            <script>window.onload = function() { window.print(); };<\/script>
+        </body>
+        </html>
+    `);
+    printWindow.document.close();
+}
                             <span>الدخول: ${latestBatchMeta.accessTimes} مرات</span>
                         </div>
                     </div>
