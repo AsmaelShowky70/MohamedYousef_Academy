@@ -234,7 +234,48 @@ $whatsappEnabled = getSetting('whatsappFloatingEnabled', 'true') === 'true';
         .animate-menu-slide {
             animation: menuSlideDown 0.22s ease-out forwards;
         }
+
+        /* Anti-Piracy, Anti-Copy & Anti-Print Protection */
+        @media print {
+            html, body {
+                display: none !important;
+                visibility: hidden !important;
+                opacity: 0 !important;
+                height: 0 !important;
+                overflow: hidden !important;
+            }
+        }
+        .content-protected, .player-cinema-box, .no-copy {
+            -webkit-touch-callout: none !important;
+            -webkit-user-select: none !important;
+            -khtml-user-select: none !important;
+            -moz-user-select: none !important;
+            -ms-user-select: none !important;
+            user-select: none !important;
+        }
     </style>
+
+    <!-- Global Security & Anti-Leak Keyboard Protection -->
+    <script>
+    (function() {
+        window.addEventListener('keydown', function(e) {
+            // Block Ctrl+P (Print) and Ctrl+S (Save Page)
+            if (e.ctrlKey && (e.key === 'p' || e.key === 'P' || e.key === 's' || e.key === 'S' || e.keyCode === 80 || e.keyCode === 83)) {
+                e.preventDefault();
+                e.stopPropagation();
+                return false;
+            }
+            <?php if ($currentUser && $currentUser['role'] === 'STUDENT'): ?>
+            // Block DevTools shortcuts for students
+            if (e.keyCode === 123 || e.key === 'F12' || (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74 || e.keyCode === 67))) {
+                e.preventDefault();
+                e.stopPropagation();
+                return false;
+            }
+            <?php endif; ?>
+        }, true);
+    })();
+    </script>
 </head>
 <body class="flex flex-col min-h-screen overflow-x-hidden w-full max-w-full">
 

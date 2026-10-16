@@ -26,6 +26,12 @@ if (!$course) {
     exit;
 }
 
+// Client IP for forensic dynamic watermark
+$clientIp = $_SERVER['HTTP_CF_CONNECTING_IP'] ?? $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+if (strpos($clientIp, ',') !== false) {
+    $clientIp = trim(explode(',', $clientIp)[0]);
+}
+
 // Check full course enrollment & access
 $isFullCourseEnrolled = false;
 if ($user) {
@@ -321,14 +327,36 @@ require_once __DIR__ . '/includes/header.php';
     background-color: #000;
 }
 
+/* Anti-Piracy & Anti-Print System Protection */
+@media print {
+    html, body {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        height: 0 !important;
+        overflow: hidden !important;
+    }
+}
+
+.protected-content,
+.player-cinema-box,
+.no-copy {
+    -webkit-touch-callout: none !important;
+    -webkit-user-select: none !important;
+    -khtml-user-select: none !important;
+    -moz-user-select: none !important;
+    -ms-user-select: none !important;
+    user-select: none !important;
+}
+
 /* Dynamic Floating Watermark */
 .floating-watermark-badge {
     position: absolute;
-    z-index: 25;
+    z-index: 45;
     pointer-events: none;
     user-select: none;
     -webkit-user-select: none;
-    transition: top 1.8s cubic-bezier(0.4, 0, 0.2, 1), left 1.8s cubic-bezier(0.4, 0, 0.2, 1), opacity 1.2s ease-in-out;
+    transition: top 2.2s cubic-bezier(0.4, 0, 0.2, 1), left 2.2s cubic-bezier(0.4, 0, 0.2, 1), opacity 1.5s ease-in-out;
     opacity: 0.70;
 }
 
@@ -336,52 +364,53 @@ require_once __DIR__ . '/includes/header.php';
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding: 6px 14px;
+    padding: 7px 16px;
     border-radius: 9999px;
-    background: rgba(13, 23, 42, 0.75);
+    background: rgba(10, 15, 29, 0.85);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.25);
     color: #ffffff;
     font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.3px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
-    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.65);
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
     white-space: nowrap;
 }
 
-/* Subtle Corner / Tiled Watermark Grid (Anti-Crop Defense) */
+/* Subtle Corner / Tiled Watermark Grid (Anti-Crop & External Camera Defense) */
 .watermark-tiled-grid {
     position: absolute;
     inset: 0;
-    z-index: 20;
+    z-index: 30;
     pointer-events: none;
     user-select: none;
+    -webkit-user-select: none;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
     padding: 16px 20px;
-    opacity: 0.08;
     color: #ffffff;
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 800;
-    text-transform: uppercase;
 }
 
-/* Security Screen Protection Shield (Only active when triggered) */
+/* Security Screen Protection Shield (Active upon blur, printscreen, or recording trigger) */
 .security-screen-shield {
-    display: none !important;
+    display: none;
     position: absolute;
     inset: 0;
-    z-index: 50;
-    background: #050811;
+    z-index: 999;
+    background: #020617;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     padding: 24px;
     text-align: center;
     color: #ffffff;
+    pointer-events: auto;
+    transition: opacity 0.2s ease;
 }
 .security-screen-shield.show-shield {
     display: flex !important;
@@ -535,17 +564,49 @@ html.dark .lesson-active-item {
 
                 <?php if ($canAccessActiveVideo && $activeVideo && $videoSource): ?>
                     <!-- Secure Video Cinema Player -->
-                    <div id="secure-player-wrapper" class="player-cinema-box select-none" oncontextmenu="return false;">
+                    <div id="secure-player-wrapper" class="player-cinema-box select-none relative overflow-hidden protected-content" oncontextmenu="return false;">
 
-                        <!-- Subtle Diagonal Tiled Watermarks (Anti-Crop Defense) -->
-                        <div class="watermark-tiled-grid">
-                            <div class="flex justify-between">
-                                <span><?= htmlspecialchars(!empty($user['email']) ? $user['email'] : ($user['phone'] . '@student')) ?> • <?= htmlspecialchars($user['fullName']) ?></span>
-                                <span><?= htmlspecialchars($user['phone']) ?> • ID:#<?= htmlspecialchars($user['attendanceID'] ?? $user['id']) ?></span>
+                        <!-- Active Anti-Recording & Anti-Screenshot Shield -->
+                        <div id="tamper-shield" class="security-screen-shield" style="display: none;">
+                            <div class="w-16 h-16 rounded-2xl bg-red-500/20 text-red-500 flex items-center justify-center text-3xl mb-4 border border-red-500/30 animate-pulse">
+                                <i class="fa-solid fa-shield-halved"></i>
                             </div>
-                            <div class="flex justify-between">
-                                <span><?= htmlspecialchars($user['phone']) ?> • ID:#<?= htmlspecialchars($user['attendanceID'] ?? $user['id']) ?></span>
-                                <span><?= htmlspecialchars(!empty($user['email']) ? $user['email'] : ($user['phone'] . '@student')) ?> • <?= htmlspecialchars($user['fullName']) ?></span>
+                            <h3 class="text-xl sm:text-2xl font-black text-white mb-2 tracking-wide">
+                                محتوى محمي بحقوق الملكية الفكرية
+                            </h3>
+                            <p class="text-xs sm:text-sm text-slate-300 max-w-md leading-relaxed mb-4">
+                                تم حجب الفيديو فوراً لرصد محاولة تصوير شاشة أو تبديل النوافذ لحماية حقوق الملكية الفكرية لمنصة <span class="text-amber-400 font-bold">الأستاذ محمد يوسف</span>.
+                            </p>
+                            <div class="inline-flex flex-wrap items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700/80 text-xs font-mono text-slate-300 shadow-lg">
+                                <span class="text-red-400 font-bold"><i class="fa-solid fa-user-lock ml-1"></i> المشاهد المسجل:</span>
+                                <span><?= htmlspecialchars($user['fullName'] ?: 'طالب مسجل') ?></span>
+                                <span>•</span>
+                                <span dir="ltr" class="text-amber-300 font-bold"><?= htmlspecialchars($user['phone'] ?? '') ?></span>
+                                <span>•</span>
+                                <span>ID: #<?= htmlspecialchars($user['attendanceID'] ?? $user['id']) ?></span>
+                                <span>•</span>
+                                <span class="text-slate-400"><?= htmlspecialchars($clientIp) ?></span>
+                            </div>
+                            <p class="text-[11px] text-slate-400 mt-4 flex items-center gap-1.5">
+                                <i class="fa-solid fa-circle-info text-amber-400"></i>
+                                سيتم استئناف العرض تلقائياً بمجرد العودة لشاشة الدرس.
+                            </p>
+                        </div>
+
+                        <!-- Subtle Diagonal Tiled Watermarks (Anti-Crop & External Camera Defense) -->
+                        <div class="watermark-tiled-grid select-none pointer-events-none">
+                            <div class="flex justify-between items-center opacity-20 font-mono text-[10px] sm:text-xs">
+                                <span><?= htmlspecialchars($user['phone'] ?? '') ?> • ID:#<?= htmlspecialchars($user['attendanceID'] ?? $user['id']) ?></span>
+                                <span><?= htmlspecialchars($user['fullName'] ?? '') ?> • <?= htmlspecialchars($clientIp) ?></span>
+                            </div>
+                            <div class="flex justify-center items-center py-2 pointer-events-none">
+                                <span class="transform -rotate-12 tracking-wider text-xs sm:text-sm font-mono font-bold select-none opacity-25 text-center px-4 py-1.5 rounded-lg border border-white/10 bg-black/40 backdrop-blur-[1px]">
+                                    <?= htmlspecialchars($user['fullName'] ?? '') ?> • <?= htmlspecialchars($user['phone'] ?? '') ?> • ID:#<?= htmlspecialchars($user['attendanceID'] ?? $user['id']) ?>
+                                </span>
+                            </div>
+                            <div class="flex justify-between items-center opacity-20 font-mono text-[10px] sm:text-xs">
+                                <span><?= htmlspecialchars($user['fullName'] ?? '') ?> • <?= htmlspecialchars($clientIp) ?></span>
+                                <span><?= htmlspecialchars($user['phone'] ?? '') ?> • ID:#<?= htmlspecialchars($user['attendanceID'] ?? $user['id']) ?></span>
                             </div>
                         </div>
 
@@ -553,18 +614,18 @@ html.dark .lesson-active-item {
                         <div id="dynamic-watermark" class="floating-watermark-badge">
                             <div class="floating-watermark-inner">
                                 <i class="fa-solid fa-shield-halved text-amber-400 text-xs"></i>
-                                <span><?= htmlspecialchars(!empty($user['email']) ? $user['email'] : ($user['phone'] . '@student')) ?></span>
-                                <span>•</span>
                                 <span><?= htmlspecialchars($user['fullName'] ?: ($user['firstName'] . ' ' . $user['lastName'])) ?></span>
                                 <span>•</span>
-                                <span dir="ltr"><?= htmlspecialchars($user['phone']) ?></span>
+                                <span dir="ltr" class="text-amber-300 font-mono"><?= htmlspecialchars($user['phone'] ?? '') ?></span>
                                 <span>•</span>
-                                <span>#<?= htmlspecialchars($user['attendanceID'] ?? $user['id']) ?></span>
+                                <span class="font-mono">#<?= htmlspecialchars($user['attendanceID'] ?? $user['id']) ?></span>
+                                <span>•</span>
+                                <span id="wm-live-time" class="font-mono text-emerald-300 text-[10px]"></span>
                             </div>
                         </div>
 
                         <!-- Player Mount Point -->
-                        <div id="player-mount-point" class="w-full h-full" data-player="<?= htmlspecialchars($encryptedVideoPayload) ?>">
+                        <div id="player-mount-point" class="w-full h-full transition-all duration-300" data-player="<?= htmlspecialchars($encryptedVideoPayload) ?>">
                             <?php if ($videoSource['type'] === 'youtube'): ?>
                                 <iframe id="video-frame" src="<?= htmlspecialchars($videoSource['embedUrl']) ?>" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen class="w-full h-full border-0 block bg-black"></iframe>
                             <?php elseif ($videoSource['type'] === 'dailymotion'): ?>
@@ -576,6 +637,17 @@ html.dark .lesson-active-item {
                             <?php endif; ?>
                         </div>
 
+                    </div>
+
+                    <!-- Psychological & Legal Deterrent Notice -->
+                    <div class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-amber-500/10 border border-amber-500/25 text-amber-900 dark:text-amber-200 text-xs leading-relaxed shadow-sm">
+                        <div class="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 text-lg">
+                            <i class="fa-solid fa-user-shield"></i>
+                        </div>
+                        <div class="flex-1">
+                            <strong class="font-bold">تنبيه حماية الملكية الفكرية:</strong>
+                            هذا الدرس محمي بنظام البصمة الرقمية الحية المشفرة ببيانات حسابك (الاسم، الهاتف، كود الطالب، وساعة المشاهدة بالثواني). يُحظر تماماً تصوير الشاشة أو تسجيل الفيديوهات أو تداولها بأي وسيلة. المخالفة تعرض صاحب الحساب للحظر النهائي والملاحقة القانونية فوراً.
+                        </div>
                     </div>
 
                     <!-- Video Controls & Metadata Bar -->
@@ -984,14 +1056,18 @@ async function handleRedeemCode(e) {
     }
 }
 
-// Anti-Recording, Dynamic Floating Watermark & Security Traps
+// ==============================================================
+// Advanced Anti-Piracy, Dynamic Forensic Watermark & Anti-Recording Shield
+// ==============================================================
 (function() {
     const playerWrapper = document.getElementById('secure-player-wrapper');
     const wm = document.getElementById('dynamic-watermark');
+    const shield = document.getElementById('tamper-shield');
+    const mount = document.getElementById('player-mount-point');
+
     if (!playerWrapper) return;
 
     // 0. Ensure Player is mounted (PHP renders it directly; JS ensures fallback if needed)
-    const mount = document.getElementById('player-mount-point');
     if (mount && !mount.querySelector('iframe') && !mount.querySelector('video')) {
         const rawToken = mount.getAttribute('data-player');
         if (rawToken) {
@@ -1037,51 +1113,198 @@ async function handleRedeemCode(e) {
         }
     }
 
-    if (!wm) return;
-
-    // 1. Dynamic Moving Watermark Coordinates
+    // 1. Dynamic Moving Watermark Coordinates (Moving every 3.5s)
     function animateWatermark() {
-        const minX = 6, maxX = 60;
-        const minY = 8, maxY = 75;
+        if (!wm) return;
+        const minX = 4, maxX = 60;
+        const minY = 6, maxY = 76;
         const x = Math.floor(Math.random() * (maxX - minX + 1)) + minX;
         const y = Math.floor(Math.random() * (maxY - minY + 1)) + minY;
-        const op = (Math.random() * 0.35 + 0.45).toFixed(2);
+        const op = (Math.random() * 0.30 + 0.55).toFixed(2);
 
         wm.style.top = y + '%';
         wm.style.left = x + '%';
         wm.style.opacity = op;
     }
-    setInterval(animateWatermark, 4200);
-    animateWatermark();
+    if (wm) {
+        setInterval(animateWatermark, 3500);
+        animateWatermark();
+    }
 
-    // 3. Anti-PrintScreen & Screen Capture Traps
-    window.addEventListener('keyup', function(e) {
-        if (e.key === 'PrintScreen' || e.keyCode === 44) {
-            flashScreenShield();
+    // 2. Real-time Clock for Watermark Badge
+    function updateWatermarkClock() {
+        const clockEl = document.getElementById('wm-live-time');
+        if (clockEl) {
+            const now = new Date();
+            const h = String(now.getHours()).padStart(2, '0');
+            const m = String(now.getMinutes()).padStart(2, '0');
+            const s = String(now.getSeconds()).padStart(2, '0');
+            clockEl.textContent = h + ':' + m + ':' + s;
+        }
+    }
+    setInterval(updateWatermarkClock, 1000);
+    updateWatermarkClock();
+
+    // 3. Blackout Tamper Shield Controls
+    let isShieldActive = false;
+    let shieldRestoreTimer = null;
+
+    function activateSecurityShield(reason) {
+        isShieldActive = true;
+        if (shieldRestoreTimer) clearTimeout(shieldRestoreTimer);
+
+        if (shield) {
+            shield.style.display = 'flex';
+            shield.classList.add('show-shield');
+        }
+        if (mount) {
+            mount.style.filter = 'blur(45px)';
+            mount.style.opacity = '0';
+        }
+
+        const directVid = document.getElementById('direct-video-player');
+        if (directVid && !directVid.paused) {
+            try { directVid.pause(); } catch(e) {}
+        }
+
+        // Wipe clipboard content on screen capture or copy attempt
+        try {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText("⚠️ محتوى تعليمي محمي بحقوق الملكية الفكرية - منصة الأستاذ محمد يوسف");
+            }
+        } catch(e) {}
+    }
+
+    function deactivateSecurityShield() {
+        if (!isShieldActive) return;
+        // Keep shield for 700ms cooldown to ensure screen capture tools miss the video frames
+        if (shieldRestoreTimer) clearTimeout(shieldRestoreTimer);
+        shieldRestoreTimer = setTimeout(function() {
+            isShieldActive = false;
+            if (shield) {
+                shield.style.display = 'none';
+                shield.classList.remove('show-shield');
+            }
+            if (mount) {
+                mount.style.filter = 'none';
+                mount.style.opacity = '1';
+            }
+        }, 700);
+    }
+
+    // 4. Trigger Shield when Window loses focus (Snipping tool, screen recorders, app switcher)
+    window.addEventListener('blur', function() {
+        activateSecurityShield('window_blur');
+    });
+
+    window.addEventListener('focus', function() {
+        deactivateSecurityShield();
+    });
+
+    // 5. Trigger Shield when Tab visibility changes (switching tabs or minimizing)
+    document.addEventListener('visibilitychange', function() {
+        if (document.hidden) {
+            activateSecurityShield('tab_hidden');
+        } else {
+            deactivateSecurityShield();
         }
     });
 
+    // 6. Keyboard & Screenshot Traps
     window.addEventListener('keydown', function(e) {
-        // Prevent DevTools & Save shortcuts: F12, Ctrl+Shift+I/J/C, Ctrl+U/S/P
-        if (e.keyCode === 123 ||
-            (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74 || e.keyCode === 67)) ||
-            (e.ctrlKey && (e.keyCode === 85 || e.keyCode === 83 || e.keyCode === 80))) {
+        // PrintScreen Key
+        if (e.key === 'PrintScreen' || e.keyCode === 44) {
+            e.preventDefault();
+            e.stopPropagation();
+            activateSecurityShield('printscreen');
+            setTimeout(deactivateSecurityShield, 3500);
+            return false;
+        }
+
+        // F12 (DevTools)
+        if (e.keyCode === 123 || e.key === 'F12') {
+            e.preventDefault();
+            e.stopPropagation();
+            activateSecurityShield('f12');
+            setTimeout(deactivateSecurityShield, 2500);
+            return false;
+        }
+
+        // Ctrl+Shift+I / J / C (DevTools Inspect)
+        if (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74 || e.keyCode === 67 || e.key === 'I' || e.key === 'J' || e.key === 'C')) {
+            e.preventDefault();
+            e.stopPropagation();
+            activateSecurityShield('inspect_devtools');
+            setTimeout(deactivateSecurityShield, 2500);
+            return false;
+        }
+
+        // Ctrl+U (View Source), Ctrl+S (Save Page), Ctrl+P (Print Page)
+        if (e.ctrlKey && (e.keyCode === 85 || e.keyCode === 83 || e.keyCode === 80 || e.key === 'u' || e.key === 's' || e.key === 'p')) {
+            e.preventDefault();
+            e.stopPropagation();
+            activateSecurityShield('save_or_print');
+            setTimeout(deactivateSecurityShield, 2500);
+            return false;
+        }
+
+        // Meta/Windows Key + Shift + S (Snipping Tool)
+        if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === 's' || e.key === 'S' || e.keyCode === 83)) {
+            e.preventDefault();
+            e.stopPropagation();
+            activateSecurityShield('snipping_shortcut');
+            setTimeout(deactivateSecurityShield, 3500);
+            return false;
+        }
+    }, true);
+
+    window.addEventListener('keyup', function(e) {
+        if (e.key === 'PrintScreen' || e.keyCode === 44) {
+            activateSecurityShield('printscreen_keyup');
+            setTimeout(deactivateSecurityShield, 3500);
+        }
+    }, true);
+
+    // 7. Poison Screen Recording MediaDevices API
+    try {
+        if (navigator.mediaDevices && typeof navigator.mediaDevices.getDisplayMedia === 'function') {
+            navigator.mediaDevices.getDisplayMedia = function() {
+                activateSecurityShield('screen_recording_api');
+                return Promise.reject(new DOMException("تسجيل الشاشة محظور لحماية الملكية الفكرية.", "NotAllowedError"));
+            };
+        }
+    } catch(e) {}
+
+    // 8. Prevent Context Menu, Copy, Selection, Dragging across the player
+    ['contextmenu', 'selectstart', 'dragstart', 'copy', 'cut'].forEach(function(evt) {
+        playerWrapper.addEventListener(evt, function(e) {
             e.preventDefault();
             e.stopPropagation();
             return false;
-        }
+        }, true);
     });
 
-    function flashScreenShield() {
-        try { navigator.clipboard.writeText(''); } catch(e) {}
-        const shield = document.getElementById('tamper-shield');
-        if (shield) {
-            shield.classList.remove('hidden');
-            setTimeout(function() {
-                shield.classList.add('hidden');
-            }, 3000);
-        }
-    }
+    // 9. Anti-Tamper DevTools Mutation Observer
+    try {
+        const observer = new MutationObserver(function() {
+            const wmCheck = document.getElementById('dynamic-watermark');
+            const shieldCheck = document.getElementById('tamper-shield');
+            if (!wmCheck || !shieldCheck || wmCheck.style.display === 'none' || wmCheck.style.visibility === 'hidden') {
+                if (mount) {
+                    mount.innerHTML = `
+                        <div class="w-full h-full flex flex-col items-center justify-center p-6 text-center bg-black text-red-500 font-sans">
+                            <i class="fa-solid fa-triangle-exclamation text-4xl mb-3 animate-bounce"></i>
+                            <h4 class="text-xl font-bold mb-1">تم إيقاف المشغل لأسباب أمنية</h4>
+                            <p class="text-xs text-slate-400">تم رصد محاولة تلاعب بعناصر الحماية. يرجى إعادة تحميل الصفحة.</p>
+                        </div>
+                    `;
+                }
+                observer.disconnect();
+            }
+        });
+        observer.observe(playerWrapper, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class'] });
+    } catch(e) {}
+
 })();
 </script>
 
