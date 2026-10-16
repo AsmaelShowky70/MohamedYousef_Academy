@@ -170,7 +170,7 @@ require_once __DIR__ . '/header.php';
 
 <div class="space-y-6">
     <!-- Header Title & Stats -->
-    <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+    <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
         <div>
             <div class="flex items-center gap-2">
                 <span class="px-2.5 py-1 text-xs font-black bg-amber-100 text-amber-800 rounded-lg flex items-center gap-1.5 border border-amber-200">
@@ -179,12 +179,12 @@ require_once __DIR__ . '/header.php';
                 </span>
                 <span class="text-xs text-slate-400 font-bold"><?= count($admins) ?> مشرفين مسجلين</span>
             </div>
-            <h1 class="text-2xl md:text-3xl font-black text-[#0d3753] tracking-tight mt-1">إدارة المشرفين وصلاحيات المسؤولين</h1>
+            <h1 class="text-xl sm:text-2xl md:text-3xl font-black text-[#0d3753] tracking-tight mt-1">إدارة المشرفين وصلاحيات المسؤولين</h1>
             <p class="text-xs text-slate-500 font-medium mt-0.5">يمكنك إضافة أدمن جديد للمنصة وتحديد الأقسام التي يحق له التحكم فيها بدقة لمنع التعديل غير المصرح به.</p>
         </div>
 
         <button onclick="document.getElementById('addAdminModal').classList.remove('hidden')" 
-                class="inline-flex items-center gap-2 px-5 py-2.5 bg-[#0f766e] hover:bg-[#0d3753] text-white font-bold text-xs rounded-xl shadow transition cursor-pointer">
+                class="inline-flex items-center justify-center gap-2 px-5 py-2.5 w-full sm:w-auto bg-[#0f766e] hover:bg-[#0d3753] text-white font-bold text-xs rounded-xl shadow transition cursor-pointer">
             <i class="fa-solid fa-user-plus"></i>
             <span>إضافة مشرف جديد +</span>
         </button>

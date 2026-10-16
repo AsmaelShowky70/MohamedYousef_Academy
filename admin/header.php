@@ -41,6 +41,10 @@ $db = getDB();
             --PButtonColor: #c79a32;
             --PThirdColor: #0d3753;
         }
+        html, body {
+            max-width: 100vw;
+            overflow-x: hidden;
+        }
         body {
             font-family: 'Cairo', 'Tajawal', sans-serif;
             background-color: #f1f5f9;
@@ -267,22 +271,38 @@ $db = getDB();
 <body class="min-h-screen bg-slate-100/70 text-slate-900 antialiased flex flex-col">
 
 <!-- Top Navigation Bar -->
-<header class="h-16 w-full border-b border-slate-200 bg-white/95 px-6 lg:px-8 flex items-center justify-between sticky top-0 z-30 shadow-sm backdrop-blur-md">
-    <!-- Right side: Title -->
-    <div class="flex items-center gap-3">
-        <h1 class="text-xl md:text-2xl font-black text-[#0d3753] tracking-tight">لوح�    <!-- Left side: Controls & User -->
-    <div class="flex items-center gap-3">
+<header class="h-16 w-full border-b border-slate-200 bg-white/95 px-3 sm:px-6 lg:px-8 flex items-center justify-between sticky top-0 z-30 shadow-sm backdrop-blur-md">
+    <!-- Right side: Title & Mobile Toggle -->
+    <div class="flex items-center gap-2 sm:gap-3">
+        <!-- Mobile Sidebar Toggle -->
+        <button type="button" id="adminSidebarToggle" onclick="toggleAdminSidebar()" class="lg:hidden inline-flex items-center justify-center p-2 rounded-xl text-slate-700 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800 transition cursor-pointer" aria-label="فتح القائمة الرئيسية">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+
+        <a href="/admin/index.php" class="flex items-center gap-2 group">
+            <div class="w-9 h-9 rounded-xl bg-teal-50 dark:bg-teal-950/60 border border-teal-200 dark:border-teal-800 flex items-center justify-center text-[#0f766e] dark:text-teal-400 font-black shadow-sm group-hover:scale-105 transition shrink-0">
+                <i class="fa-solid fa-shapes text-base"></i>
+            </div>
+            <div class="flex flex-col">
+                <h1 class="text-sm sm:text-lg font-black text-[#0d3753] dark:text-white tracking-tight leading-tight">لوحة التحكم</h1>
+                <span class="text-[10px] text-slate-400 font-bold hidden sm:inline">أ. محمد يوسف</span>
+            </div>
+        </a>
+    </div>
+
+    <!-- Left side: Controls & User -->
+    <div class="flex items-center gap-1.5 sm:gap-3">
         <!-- Admin Profile Info -->
-        <div class="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-slate-100/90 rounded-xl text-xs font-bold border border-slate-200/80">
+        <div class="hidden md:flex items-center gap-2 px-3 py-1.5 bg-slate-100/90 dark:bg-slate-800 rounded-xl text-xs font-bold border border-slate-200/80 dark:border-slate-700">
             <i class="fa-solid <?= isSuperAdmin($adminUser) ? 'fa-crown text-amber-500' : 'fa-user-shield text-teal-600' ?>"></i>
-            <span class="text-slate-800"><?= htmlspecialchars($adminUser['firstName'] ?? $adminUser['fullName'] ?? 'المسؤول') ?></span>
-            <span class="text-[10px] font-black px-1.5 py-0.5 rounded <?= isSuperAdmin($adminUser) ? 'bg-amber-100 text-amber-800 border border-amber-200' : 'bg-teal-100 text-teal-800 border border-teal-200' ?>">
+            <span class="text-slate-800 dark:text-slate-200"><?= htmlspecialchars($adminUser['firstName'] ?? $adminUser['fullName'] ?? 'المسؤول') ?></span>
+            <span class="text-[10px] font-black px-1.5 py-0.5 rounded <?= isSuperAdmin($adminUser) ? 'bg-amber-100 text-amber-800 border border-amber-200 dark:bg-amber-950 dark:text-amber-300' : 'bg-teal-100 text-teal-800 border border-teal-200 dark:bg-teal-950 dark:text-teal-300' ?>">
                 <?= isSuperAdmin($adminUser) ? 'المالك' : 'مشرف' ?>
             </span>
         </div>
 
         <!-- Sun/Moon Theme Toggle Button -->
-        <button type="button" id="themeToggleBtn" onclick="toggleTheme()" class="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white p-2 text-slate-600 hover:bg-slate-100 shadow-sm transition cursor-pointer" title="تبديل الوضع الليلي / الفاتح">
+        <button type="button" id="themeToggleBtn" onclick="toggleTheme()" class="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white p-2 text-slate-600 hover:bg-slate-100 shadow-sm transition cursor-pointer dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200" title="تبديل الوضع الليلي / الفاتح">
             <!-- Sun icon (shown in light mode) -->
             <svg id="themeIconSun" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="block dark:hidden">
                 <circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>
@@ -294,91 +314,112 @@ $db = getDB();
         </button>
 
         <!-- View Website Link -->
-        <a href="/index.php" title="زيارة الموقع الرئيسي" class="inline-flex items-center gap-1.5 rounded-lg bg-teal-50 border border-teal-200/80 px-3 py-1.5 text-xs font-bold text-[#0f766e] hover:bg-teal-100 transition">
+        <a href="/index.php" title="زيارة الموقع الرئيسي" class="inline-flex items-center gap-1.5 rounded-lg bg-teal-50 border border-teal-200/80 px-2.5 sm:px-3 py-1.5 text-xs font-bold text-[#0f766e] hover:bg-teal-100 transition dark:bg-teal-950/60 dark:border-teal-800 dark:text-teal-400">
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-            <span>الموقع</span>
+            <span class="hidden sm:inline">الموقع</span>
         </a>
 
         <!-- Logout Link -->
-        <a href="/logout.php" title="تسجيل الخروج" class="inline-flex items-center justify-center rounded-lg border border-red-200 bg-red-50 p-2 text-red-600 hover:bg-red-100 transition">
+        <a href="/logout.php" title="تسجيل الخروج" class="inline-flex items-center justify-center rounded-lg border border-red-200 bg-red-50 p-2 text-red-600 hover:bg-red-100 transition dark:bg-red-950/50 dark:border-red-900/50 dark:text-red-400">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
         </a>
     </div>
 </header>
 
+<!-- Mobile Sidebar Backdrop Overlay -->
+<div id="adminSidebarBackdrop" onclick="closeAdminSidebar()" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 hidden transition-opacity duration-300 opacity-0 lg:hidden"></div>
+
 <!-- Main Page Layout Container (Sidebar on Right, Content on Left) -->
-<div class="flex-1 flex w-full">
-    <!-- Right Sidebar Navigation -->
-    <aside class="w-64 flex-shrink-0 border-l border-slate-200 bg-[#eef3f8]/70 p-4 space-y-1.5 min-h-[calc(100vh-64px)]">
-        <a href="/admin/index.php" class="flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-bold transition <?= ($activeAdminNav ?? '') === 'dashboard' ? 'bg-white text-[#0f766e] shadow-sm' : 'text-slate-600 hover:bg-white/70 hover:text-slate-900' ?>">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
-            <span>لوحة التحكم</span>
-        </a>
+<div class="flex-1 flex w-full relative">
+    <!-- Right Sidebar Navigation (Drawer on Mobile, Fixed Sidebar on Desktop) -->
+    <aside id="adminSidebar" class="fixed inset-y-0 right-0 z-50 w-72 max-w-[85vw] bg-white dark:bg-[#0b1522] border-l border-slate-200 dark:border-slate-800 p-4 space-y-1.5 overflow-y-auto transform translate-x-full lg:translate-x-0 lg:static lg:w-64 lg:flex-shrink-0 lg:bg-[#eef3f8]/70 lg:min-h-[calc(100vh-64px)] shadow-2xl lg:shadow-none transition-transform duration-300 ease-in-out flex flex-col justify-between">
+        <div>
+            <!-- Mobile Drawer Top Header (Shown on mobile only) -->
+            <div class="flex items-center justify-between pb-3 mb-3 border-b border-slate-200 dark:border-slate-800 lg:hidden">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-lg bg-teal-50 dark:bg-teal-950 text-[#0f766e] dark:text-teal-400 flex items-center justify-center font-bold">
+                        <i class="fa-solid fa-shapes text-sm"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-black text-slate-800 dark:text-white">قائمة الإدارة</h3>
+                        <span class="text-[10px] text-slate-400 font-bold"><?= htmlspecialchars($adminUser['firstName'] ?? 'المسؤول') ?></span>
+                    </div>
+                </div>
+                <button type="button" onclick="closeAdminSidebar()" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition" aria-label="إغلاق القائمة">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
 
-        <?php if (hasAdminPermission('students', $adminUser)): ?>
-        <a href="/admin/users.php" class="flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-bold transition <?= ($activeAdminNav ?? '') === 'users' ? 'bg-white text-[#0f766e] shadow-sm' : 'text-slate-600 hover:bg-white/70 hover:text-slate-900' ?>">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-            <span>المستخدمين والطلاب</span>
-        </a>
-        <?php endif; ?>
-
-        <?php if (hasAdminPermission('courses', $adminUser)): ?>
-        <a href="/admin/courses.php" class="flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-bold transition <?= ($activeAdminNav ?? '') === 'courses' ? 'bg-white text-[#0f766e] shadow-sm' : 'text-slate-600 hover:bg-white/70 hover:text-slate-900' ?>">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
-            <span>الكورسات</span>
-        </a>
-
-        <a href="/admin/years.php" class="flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-bold transition <?= ($activeAdminNav ?? '') === 'years' ? 'bg-white text-[#0f766e] shadow-sm' : 'text-slate-600 hover:bg-white/70 hover:text-slate-900' ?>">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-            <span>السنوات الدراسية</span>
-        </a>
-        <?php endif; ?>
-
-        <?php if (hasAdminPermission('content', $adminUser)): ?>
-        <a href="/admin/content.php" class="flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-bold transition <?= ($activeAdminNav ?? '') === 'content' ? 'bg-white text-[#0f766e] shadow-sm' : 'text-slate-600 hover:bg-white/70 hover:text-slate-900' ?>">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            <span>المحتوى</span>
-        </a>
-        <?php endif; ?>
-
-        <?php if (hasAdminPermission('codes', $adminUser)): ?>
-        <a href="/admin/codes.php" class="flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-bold transition <?= ($activeAdminNav ?? '') === 'codes' ? 'bg-white text-[#0f766e] shadow-sm' : 'text-slate-600 hover:bg-white/70 hover:text-slate-900' ?>">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
-            <span>الأكواد</span>
-        </a>
-        <?php endif; ?>
-
-        <?php if (hasAdminPermission('marks', $adminUser)): ?>
-        <a href="/admin/studentsmarks.php" class="flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-bold transition <?= ($activeAdminNav ?? '') === 'marks' ? 'bg-white text-[#0f766e] shadow-sm' : 'text-slate-600 hover:bg-white/70 hover:text-slate-900' ?>">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>
-            <span>درجات الطلاب والغياب</span>
-        </a>
-        <?php endif; ?>
-
-        <?php if (hasAdminPermission('settings', $adminUser)): ?>
-        <a href="/admin/settings.php" class="flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-bold transition <?= ($activeAdminNav ?? '') === 'settings' ? 'bg-white text-[#0f766e] shadow-sm' : 'text-slate-600 hover:bg-white/70 hover:text-slate-900' ?>">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
-            <span>الإعدادات</span>
-        </a>
-        <?php endif; ?>
-
-        <?php if (isSuperAdmin($adminUser)): ?>
-        <div class="pt-3 pb-1 border-t border-slate-200/80 my-2">
-            <span class="px-3 text-[10px] font-black text-amber-800 tracking-wider uppercase block mb-1">خاص بالمالك</span>
-            <a href="/admin/admins.php" class="flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-bold transition <?= ($activeAdminNav ?? '') === 'admins' ? 'bg-amber-100/80 text-amber-900 shadow-sm border border-amber-300' : 'text-amber-900 bg-amber-50/70 hover:bg-amber-100/90' ?>">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-amber-600"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-                <span>إدارة المشرفين</span>
-                <span class="px-1.5 py-0.5 text-[10px] bg-amber-200 text-amber-900 rounded font-black mr-auto">المالك</span>
+            <a href="/admin/index.php" class="flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-bold transition <?= ($activeAdminNav ?? '') === 'dashboard' ? 'bg-white text-[#0f766e] shadow-sm dark:bg-[#162c44] dark:text-teal-400' : 'text-slate-600 hover:bg-white/70 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-[#132337] dark:hover:text-white' ?>">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+                <span>لوحة التحكم</span>
             </a>
+
+            <?php if (hasAdminPermission('students', $adminUser)): ?>
+            <a href="/admin/users.php" class="flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-bold transition <?= ($activeAdminNav ?? '') === 'users' ? 'bg-white text-[#0f766e] shadow-sm dark:bg-[#162c44] dark:text-teal-400' : 'text-slate-600 hover:bg-white/70 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-[#132337] dark:hover:text-white' ?>">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                <span>المستخدمين والطلاب</span>
+            </a>
+            <?php endif; ?>
+
+            <?php if (hasAdminPermission('courses', $adminUser)): ?>
+            <a href="/admin/courses.php" class="flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-bold transition <?= ($activeAdminNav ?? '') === 'courses' ? 'bg-white text-[#0f766e] shadow-sm dark:bg-[#162c44] dark:text-teal-400' : 'text-slate-600 hover:bg-white/70 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-[#132337] dark:hover:text-white' ?>">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+                <span>الكورسات</span>
+            </a>
+
+            <a href="/admin/years.php" class="flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-bold transition <?= ($activeAdminNav ?? '') === 'years' ? 'bg-white text-[#0f766e] shadow-sm dark:bg-[#162c44] dark:text-teal-400' : 'text-slate-600 hover:bg-white/70 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-[#132337] dark:hover:text-white' ?>">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                <span>السنوات الدراسية</span>
+            </a>
+            <?php endif; ?>
+
+            <?php if (hasAdminPermission('content', $adminUser)): ?>
+            <a href="/admin/content.php" class="flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-bold transition <?= ($activeAdminNav ?? '') === 'content' ? 'bg-white text-[#0f766e] shadow-sm dark:bg-[#162c44] dark:text-teal-400' : 'text-slate-600 hover:bg-white/70 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-[#132337] dark:hover:text-white' ?>">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                <span>المحتوى</span>
+            </a>
+            <?php endif; ?>
+
+            <?php if (hasAdminPermission('codes', $adminUser)): ?>
+            <a href="/admin/codes.php" class="flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-bold transition <?= ($activeAdminNav ?? '') === 'codes' ? 'bg-white text-[#0f766e] shadow-sm dark:bg-[#162c44] dark:text-teal-400' : 'text-slate-600 hover:bg-white/70 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-[#132337] dark:hover:text-white' ?>">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                <span>الأكواد</span>
+            </a>
+            <?php endif; ?>
+
+            <?php if (hasAdminPermission('marks', $adminUser)): ?>
+            <a href="/admin/studentsmarks.php" class="flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-bold transition <?= ($activeAdminNav ?? '') === 'marks' ? 'bg-white text-[#0f766e] shadow-sm dark:bg-[#162c44] dark:text-teal-400' : 'text-slate-600 hover:bg-white/70 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-[#132337] dark:hover:text-white' ?>">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>
+                <span>درجات الطلاب والغياب</span>
+            </a>
+            <?php endif; ?>
+
+            <?php if (hasAdminPermission('settings', $adminUser)): ?>
+            <a href="/admin/settings.php" class="flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-bold transition <?= ($activeAdminNav ?? '') === 'settings' ? 'bg-white text-[#0f766e] shadow-sm dark:bg-[#162c44] dark:text-teal-400' : 'text-slate-600 hover:bg-white/70 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-[#132337] dark:hover:text-white' ?>">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+                <span>الإعدادات</span>
+            </a>
+            <?php endif; ?>
+
+            <?php if (isSuperAdmin($adminUser)): ?>
+            <div class="pt-3 pb-1 border-t border-slate-200/80 dark:border-slate-800 my-2">
+                <span class="px-3 text-[10px] font-black text-amber-800 dark:text-amber-400 tracking-wider uppercase block mb-1">خاص بالمالك</span>
+                <a href="/admin/admins.php" class="flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-bold transition <?= ($activeAdminNav ?? '') === 'admins' ? 'bg-amber-100/80 text-amber-900 shadow-sm border border-amber-300 dark:bg-amber-950/70 dark:text-amber-300 dark:border-amber-700' : 'text-amber-900 bg-amber-50/70 hover:bg-amber-100/90 dark:text-amber-300 dark:bg-amber-950/30 dark:hover:bg-amber-950/60' ?>">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-amber-600"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                    <span>إدارة المشرفين</span>
+                    <span class="px-1.5 py-0.5 text-[10px] bg-amber-200 text-amber-900 rounded font-black mr-auto dark:bg-amber-800 dark:text-amber-100">المالك</span>
+                </a>
+            </div>
+            <?php endif; ?>
         </div>
-        <?php endif; ?>
     </aside>
 
     <!-- Main Content Area -->
-    <main class="flex-1 p-6 lg:p-8 space-y-6 overflow-y-auto">
+    <main class="flex-1 w-full min-w-0 p-3 sm:p-5 lg:p-8 space-y-6 overflow-y-auto overflow-x-hidden">
 
     <?php if (!empty($_SESSION['admin_flash_msg'])): ?>
-        <div class="p-4 rounded-xl text-xs font-bold flex items-center gap-2 <?= ($_SESSION['admin_flash_type'] ?? '') === 'error' ? 'bg-red-50 text-red-800 border border-red-200' : 'bg-emerald-50 text-emerald-800 border border-emerald-200' ?>">
+        <div class="p-4 rounded-xl text-xs font-bold flex items-center gap-2 <?= ($_SESSION['admin_flash_type'] ?? '') === 'error' ? 'bg-red-50 text-red-800 border border-red-200 dark:bg-red-950 dark:text-red-300 dark:border-red-800' : 'bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800' ?>">
             <i class="fa-solid fa-circle-exclamation text-base"></i>
             <span><?= htmlspecialchars($_SESSION['admin_flash_msg']) ?></span>
         </div>
@@ -392,4 +433,62 @@ function toggleTheme() {
         localStorage.setItem('theme', isDark ? 'dark' : 'light');
     } catch(e) {}
 }
+
+function toggleAdminSidebar() {
+    const sidebar = document.getElementById('adminSidebar');
+    const backdrop = document.getElementById('adminSidebarBackdrop');
+    if (!sidebar || !backdrop) return;
+    const isClosed = sidebar.classList.contains('translate-x-full');
+    if (isClosed) {
+        openAdminSidebar();
+    } else {
+        closeAdminSidebar();
+    }
+}
+
+function openAdminSidebar() {
+    const sidebar = document.getElementById('adminSidebar');
+    const backdrop = document.getElementById('adminSidebarBackdrop');
+    if (!sidebar || !backdrop) return;
+    backdrop.classList.remove('hidden');
+    void backdrop.offsetWidth; // Force reflow
+    backdrop.classList.remove('opacity-0');
+    backdrop.classList.add('opacity-100');
+    sidebar.classList.remove('translate-x-full');
+    document.body.classList.add('overflow-hidden', 'lg:overflow-auto');
+}
+
+function closeAdminSidebar() {
+    const sidebar = document.getElementById('adminSidebar');
+    const backdrop = document.getElementById('adminSidebarBackdrop');
+    if (!sidebar || !backdrop) return;
+    sidebar.classList.add('translate-x-full');
+    backdrop.classList.remove('opacity-100');
+    backdrop.classList.add('opacity-0');
+    setTimeout(() => {
+        if (sidebar && sidebar.classList.contains('translate-x-full')) {
+            backdrop.classList.add('hidden');
+        }
+    }, 300);
+    document.body.classList.remove('overflow-hidden', 'lg:overflow-auto');
+}
+
+window.addEventListener('resize', function() {
+    if (window.innerWidth >= 1024) {
+        closeAdminSidebar();
+    }
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    const sidebar = document.getElementById('adminSidebar');
+    if (sidebar) {
+        sidebar.querySelectorAll('a').forEach(link => {
+            link.addEventListener('click', function() {
+                if (window.innerWidth < 1024) {
+                    closeAdminSidebar();
+                }
+            });
+        });
+    }
+});
 </script>

@@ -174,12 +174,12 @@ foreach ($rawCollections as $col) {
 ?>
 
 <!-- Title & Action -->
-<div class="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
+<div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 mb-6">
     <div>
-        <h2 class="text-2xl font-black text-[#0d3753] tracking-tight">إدارة الكورسات والمحاضرات والحصص</h2>
+        <h2 class="text-xl sm:text-2xl font-black text-[#0d3753] tracking-tight">إدارة الكورسات والمحاضرات والحصص</h2>
         <p class="text-xs text-slate-500 font-medium mt-1">إنشاء وتعديل الكورسات، إضافة الدروس وتحديد سعر كل حصة على حدة، واختيار الصور السابقة (<?= count($courses) ?> كورس)</p>
     </div>
-    <button onclick="openAddCourseModal()" class="btn-add-action inline-flex items-center gap-2 px-5 py-2.5 bg-[#0f766e] hover:bg-[#0d3753] text-white font-bold text-xs rounded-xl shadow transition cursor-pointer">
+    <button onclick="openAddCourseModal()" class="btn-add-action inline-flex items-center justify-center gap-2 px-5 py-2.5 w-full sm:w-auto bg-[#0f766e] hover:bg-[#0d3753] text-white font-bold text-xs rounded-xl shadow transition cursor-pointer">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         <span>إضافة كورس جديد</span>
     </button>

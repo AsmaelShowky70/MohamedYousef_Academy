@@ -122,19 +122,19 @@ $years = $db->query("SELECT id, name FROM Year ORDER BY `order` ASC")->fetchAll(
 ?>
 
 <!-- Title and Top Action Bar -->
-<div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+<div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
     <div>
-        <h2 class="text-2xl font-black text-[#0d3753] tracking-tight">إدارة المستخدمين والطلاب</h2>
+        <h2 class="text-xl sm:text-2xl font-black text-[#0d3753] tracking-tight">إدارة المستخدمين والطلاب</h2>
         <p class="text-xs text-slate-500 font-medium mt-1">عرض وتفعيل وفلترة حسابات طلاب السنتر والأونلاين</p>
     </div>
-    <div class="flex items-center gap-2">
-        <a href="studentsmarks.php" class="inline-flex items-center gap-2 px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl shadow transition">
+    <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+        <a href="studentsmarks.php" class="flex-1 sm:flex-none justify-center inline-flex items-center gap-2 px-3.5 sm:px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl shadow transition">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-            <span>كشف التقييم والدرجات</span>
+            <span class="whitespace-nowrap">كشف التقييم والدرجات</span>
         </a>
-        <button onclick="openModal('addStudentModal')" class="btn-add-action inline-flex items-center gap-2 px-5 py-2.5 bg-[#0f766e] hover:bg-[#0d3753] text-white font-bold text-xs rounded-xl shadow transition cursor-pointer">
+        <button onclick="openModal('addStudentModal')" class="btn-add-action flex-1 sm:flex-none justify-center inline-flex items-center gap-2 px-4 sm:px-5 py-2.5 bg-[#0f766e] hover:bg-[#0d3753] text-white font-bold text-xs rounded-xl shadow transition cursor-pointer">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/></svg>
-            <span>إضافة طالب جديد</span>
+            <span class="whitespace-nowrap">إضافة طالب جديد</span>
         </button>
     </div>
 </div>
@@ -146,16 +146,16 @@ $years = $db->query("SELECT id, name FROM Year ORDER BY `order` ASC")->fetchAll(
 <?php endif; ?>
 
 <!-- Quick Tabs for Center vs Online -->
-<div class="flex items-center gap-2 border-b border-slate-200 pb-2">
-    <a href="users.php<?= $yearFilter ? '?yearId='.urlencode($yearFilter) : '' ?>" class="px-4 py-2 rounded-xl text-xs font-black transition flex items-center gap-2 <?= $typeFilter === '' ? 'bg-[#0f766e] text-white shadow-sm' : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200' ?>">
+<div class="flex items-center gap-2 border-b border-slate-200 pb-2 overflow-x-auto no-scrollbar">
+    <a href="users.php<?= $yearFilter ? '?yearId='.urlencode($yearFilter) : '' ?>" class="whitespace-nowrap shrink-0 px-4 py-2 rounded-xl text-xs font-black transition flex items-center gap-2 <?= $typeFilter === '' ? 'bg-[#0f766e] text-white shadow-sm' : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200' ?>">
         <span>جميع الطلاب</span>
         <span class="px-2 py-0.5 rounded-full text-[10px] <?= $typeFilter === '' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-700' ?>"><?= $totalStudents ?></span>
     </a>
-    <a href="users.php?studentType=CENTER<?= $yearFilter ? '&yearId='.urlencode($yearFilter) : '' ?>" class="px-4 py-2 rounded-xl text-xs font-black transition flex items-center gap-2 <?= $typeFilter === 'CENTER' ? 'bg-amber-600 text-white shadow-sm' : 'bg-white text-amber-800 hover:bg-amber-50 border border-amber-200' ?>">
+    <a href="users.php?studentType=CENTER<?= $yearFilter ? '&yearId='.urlencode($yearFilter) : '' ?>" class="whitespace-nowrap shrink-0 px-4 py-2 rounded-xl text-xs font-black transition flex items-center gap-2 <?= $typeFilter === 'CENTER' ? 'bg-amber-600 text-white shadow-sm' : 'bg-white text-amber-800 hover:bg-amber-50 border border-amber-200' ?>">
         <span>🏢 طلاب السنتر</span>
         <span class="px-2 py-0.5 rounded-full text-[10px] <?= $typeFilter === 'CENTER' ? 'bg-white/20 text-white' : 'bg-amber-100 text-amber-900' ?>"><?= $totalCenter ?></span>
     </a>
-    <a href="users.php?studentType=ONLINE<?= $yearFilter ? '&yearId='.urlencode($yearFilter) : '' ?>" class="px-4 py-2 rounded-xl text-xs font-black transition flex items-center gap-2 <?= $typeFilter === 'ONLINE' ? 'bg-sky-600 text-white shadow-sm' : 'bg-white text-sky-800 hover:bg-sky-50 border border-sky-200' ?>">
+    <a href="users.php?studentType=ONLINE<?= $yearFilter ? '&yearId='.urlencode($yearFilter) : '' ?>" class="whitespace-nowrap shrink-0 px-4 py-2 rounded-xl text-xs font-black transition flex items-center gap-2 <?= $typeFilter === 'ONLINE' ? 'bg-sky-600 text-white shadow-sm' : 'bg-white text-sky-800 hover:bg-sky-50 border border-sky-200' ?>">
         <span>🌐 طلاب أونلاين</span>
         <span class="px-2 py-0.5 rounded-full text-[10px] <?= $typeFilter === 'ONLINE' ? 'bg-white/20 text-white' : 'bg-sky-100 text-sky-900' ?>"><?= $totalOnline ?></span>
     </a>
@@ -329,55 +329,55 @@ $years = $db->query("SELECT id, name FROM Year ORDER BY `order` ASC")->fetchAll(
 </div>
 
 <!-- Add Student Modal -->
-<div id="addStudentModal" class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onclick="if(event.target === this) closeModal('addStudentModal')">
-    <div class="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 space-y-5 shadow-2xl relative">
-        <button type="button" onclick="closeModal('addStudentModal')" class="absolute left-6 top-6 text-slate-400 hover:text-slate-600 transition">
+<div id="addStudentModal" class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4" onclick="if(event.target === this) closeModal('addStudentModal')">
+    <div class="bg-white dark:bg-[#101e2e] rounded-3xl max-w-lg w-full max-h-[92vh] overflow-y-auto p-5 sm:p-8 space-y-5 shadow-2xl relative">
+        <button type="button" onclick="closeModal('addStudentModal')" class="absolute left-5 top-5 text-slate-400 hover:text-slate-600 dark:hover:text-white transition">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
         </button>
 
-        <h3 class="text-lg font-black text-[#0d3753]">إضافة طالب جديد يدوياً</h3>
+        <h3 class="text-lg font-black text-[#0d3753] dark:text-white">إضافة طالب جديد يدوياً</h3>
 
         <form method="POST" action="users.php" class="space-y-4">
             <input type="hidden" name="add_student" value="1"/>
 
             <div>
-                <label class="block text-xs font-bold text-slate-700 mb-1">الاسم الكامل (ثلاثي باللغة العربية) *</label>
-                <input type="text" name="fullName" required placeholder="محمد أحمد محمود" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold outline-none focus:bg-white focus:border-[#0f766e]"/>
+                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">الاسم الكامل (ثلاثي باللغة العربية) *</label>
+                <input type="text" name="fullName" required placeholder="محمد أحمد محمود" class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-[#0d1825] border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold outline-none focus:bg-white focus:border-[#0f766e]"/>
             </div>
 
             <!-- Student Type & Center Code -->
-            <div class="p-3 bg-amber-50/70 border border-amber-200 rounded-xl space-y-2">
+            <div class="p-3 bg-amber-50/70 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 rounded-xl space-y-2">
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-xs font-bold text-amber-950 mb-1">نوع الطالب *</label>
-                        <select name="studentType" id="addStudentType" onchange="toggleCenterCodeInput(this.value)" class="w-full px-3 py-2 bg-white border border-amber-300 rounded-lg text-xs font-bold outline-none focus:border-amber-600">
+                        <label class="block text-xs font-bold text-amber-950 dark:text-amber-300 mb-1">نوع الطالب *</label>
+                        <select name="studentType" id="addStudentType" onchange="toggleCenterCodeInput(this.value)" class="w-full px-3 py-2 bg-white dark:bg-[#0d1825] border border-amber-300 dark:border-amber-800 rounded-lg text-xs font-bold outline-none focus:border-amber-600">
                             <option value="ONLINE">🌐 طالب أونلاين</option>
                             <option value="CENTER">🏢 طالب سنتر</option>
                         </select>
                     </div>
                     <div id="centerCodeWrapper" class="hidden">
-                        <label class="block text-xs font-bold text-amber-950 mb-1">كود السنتر</label>
-                        <input type="text" name="centerCode" id="addCenterCode" placeholder="مثال: C-105" class="w-full px-3 py-2 bg-white border border-amber-300 rounded-lg text-xs font-bold outline-none focus:border-amber-600"/>
+                        <label class="block text-xs font-bold text-amber-950 dark:text-amber-300 mb-1">كود السنتر</label>
+                        <input type="text" name="centerCode" id="addCenterCode" placeholder="مثال: C-105" class="w-full px-3 py-2 bg-white dark:bg-[#0d1825] border border-amber-300 dark:border-amber-800 rounded-lg text-xs font-bold outline-none focus:border-amber-600"/>
                     </div>
                 </div>
-                <p class="text-[10px] text-amber-800 font-medium">إذا كان طالب سنتر، أدخل كوده لتمييزه والبحث عنه بسهولة.</p>
+                <p class="text-[10px] text-amber-800 dark:text-amber-400 font-medium">إذا كان طالب سنتر، أدخل كوده لتمييزه والبحث عنه بسهولة.</p>
             </div>
 
-            <div class="grid grid-cols-2 gap-3">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">رقم الهاتف *</label>
-                    <input type="text" name="phone" required placeholder="010XXXXXXXX" dir="ltr" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold outline-none focus:bg-white focus:border-[#0f766e]"/>
+                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">رقم الهاتف *</label>
+                    <input type="text" name="phone" required placeholder="010XXXXXXXX" dir="ltr" class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-[#0d1825] border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold outline-none focus:bg-white focus:border-[#0f766e]"/>
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">هاتف ولي الأمر</label>
-                    <input type="text" name="parentPhone" placeholder="01XXXXXXXXX" dir="ltr" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold outline-none focus:bg-white focus:border-[#0f766e]"/>
+                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">هاتف ولي الأمر</label>
+                    <input type="text" name="parentPhone" placeholder="01XXXXXXXXX" dir="ltr" class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-[#0d1825] border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold outline-none focus:bg-white focus:border-[#0f766e]"/>
                 </div>
             </div>
 
-            <div class="grid grid-cols-2 gap-3">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">الصف الدراسي</label>
-                    <select name="yearId" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold outline-none focus:bg-white focus:border-[#0f766e]">
+                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">الصف الدراسي</label>
+                    <select name="yearId" class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-[#0d1825] border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold outline-none focus:bg-white focus:border-[#0f766e]">
                         <option value="">بدون تحديد</option>
                         <?php foreach ($years as $yr): ?>
                             <option value="<?= htmlspecialchars($yr['id']) ?>"><?= htmlspecialchars($yr['name']) ?></option>
@@ -385,14 +385,14 @@ $years = $db->query("SELECT id, name FROM Year ORDER BY `order` ASC")->fetchAll(
                     </select>
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">كلمة المرور الافتراضية</label>
-                    <input type="text" name="password" value="12345678" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold outline-none focus:bg-white focus:border-[#0f766e]"/>
+                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">كلمة المرور الافتراضية</label>
+                    <input type="text" name="password" value="12345678" class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-[#0d1825] border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold outline-none focus:bg-white focus:border-[#0f766e]"/>
                 </div>
             </div>
 
             <div>
-                <label class="block text-xs font-bold text-slate-700 mb-1">حالة الحساب</label>
-                <select name="status" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold outline-none focus:bg-white focus:border-[#0f766e]">
+                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">حالة الحساب</label>
+                <select name="status" class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-[#0d1825] border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold outline-none focus:bg-white focus:border-[#0f766e]">
                     <option value="ACTIVE">نشط (مفعل فوراً)</option>
                     <option value="PENDING">قيد الانتظار</option>
                 </select>
@@ -409,10 +409,18 @@ $years = $db->query("SELECT id, name FROM Year ORDER BY `order` ASC")->fetchAll(
 
 <script>
 function openModal(id) {
-    document.getElementById(id).classList.remove('hidden');
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.remove('hidden');
+    el.style.display = 'flex';
+    document.body.classList.add('overflow-hidden');
 }
 function closeModal(id) {
-    document.getElementById(id).classList.add('hidden');
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.add('hidden');
+    el.style.display = 'none';
+    document.body.classList.remove('overflow-hidden');
 }
 function toggleCenterCodeInput(val) {
     const wrap = document.getElementById('centerCodeWrapper');

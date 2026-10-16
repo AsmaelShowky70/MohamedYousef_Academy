@@ -344,28 +344,28 @@ require_once __DIR__ . '/header.php';
 <div class="space-y-6">
 
     <!-- Top Action Bar & Page Title -->
-    <div class="no-print flex flex-col sm:flex-row items-center justify-between gap-4">
+    <div class="no-print flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
         <div>
-            <h2 class="text-2xl font-black text-[#0d3753] tracking-tight">كشف متابعة تقدم وتقييم درجات الطلاب</h2>
+            <h2 class="text-xl sm:text-2xl font-black text-[#0d3753] tracking-tight">كشف متابعة تقدم وتقييم درجات الطلاب</h2>
             <p class="text-xs text-slate-500 font-medium mt-1">متابعة نتائج الامتحانات الإلكترونية، تقييم مستوى طلاب السنتر والأونلاين، والتواصل المباشر مع أولياء الأمور</p>
         </div>
-        <div class="flex items-center gap-2 flex-wrap">
-            <button onclick="window.print()" class="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-800 hover:bg-black text-white font-bold text-xs rounded-xl shadow transition cursor-pointer">
+        <div class="flex items-center gap-2 flex-wrap w-full sm:w-auto">
+            <button onclick="window.print()" class="flex-1 sm:flex-none justify-center inline-flex items-center gap-2 px-3.5 sm:px-4 py-2.5 bg-slate-800 hover:bg-black text-white font-bold text-xs rounded-xl shadow transition cursor-pointer">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
-                <span>طباعة الكشف (A4 PDF)</span>
+                <span class="whitespace-nowrap">طباعة الكشف (A4 PDF)</span>
             </button>
             <?php
                 $csvParams = $_GET;
                 $csvParams['export'] = 'csv';
                 $csvUrl = 'studentsmarks.php?' . http_build_query($csvParams);
             ?>
-            <a href="<?= htmlspecialchars($csvUrl) ?>" class="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs rounded-xl shadow transition">
+            <a href="<?= htmlspecialchars($csvUrl) ?>" class="flex-1 sm:flex-none justify-center inline-flex items-center gap-2 px-3.5 sm:px-4 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs rounded-xl shadow transition">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
-                <span>تصدير إلى Excel (CSV)</span>
+                <span class="whitespace-nowrap">تصدير إلى Excel (CSV)</span>
             </a>
-            <a href="users.php" class="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition">
+            <a href="users.php" class="flex-1 sm:flex-none justify-center inline-flex items-center gap-2 px-3.5 sm:px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-                <span>إدارة حسابات الطلاب</span>
+                <span class="whitespace-nowrap">إدارة حسابات الطلاب</span>
             </a>
         </div>
     </div>
