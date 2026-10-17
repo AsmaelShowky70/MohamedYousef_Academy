@@ -377,7 +377,17 @@ require_once __DIR__ . '/includes/header.php';
 .course-container {
     max-width: 1400px;
     margin: 0 auto;
-    padding: 24px 16px 80px 16px;
+    padding: 16px 12px 80px 12px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow-x: clip;
+}
+
+@media (min-width: 640px) {
+    .course-container {
+        padding: 24px 16px 80px 16px;
+    }
 }
 
 @media (min-width: 768px) {
@@ -389,16 +399,23 @@ require_once __DIR__ . '/includes/header.php';
 /* 2-Column Responsive Layout */
 .course-layout-grid {
     display: grid;
-    grid-template-columns: 1fr;
-    gap: 28px;
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
+    max-width: 100%;
+    gap: 20px;
     align-items: start;
 }
 
 @media (min-width: 1024px) {
     .course-layout-grid {
-        grid-template-columns: minmax(0, 1fr) 390px;
+        grid-template-columns: minmax(0, 1fr) 380px;
         gap: 32px;
     }
+}
+
+.course-layout-grid > * {
+    min-width: 0 !important;
+    max-width: 100% !important;
 }
 
 /* Theater Player Container */
@@ -581,6 +598,10 @@ require_once __DIR__ . '/includes/header.php';
     border-radius: 20px;
     box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.04);
     transition: all 0.25s ease;
+    box-sizing: border-box;
+    max-width: 100%;
+    overflow: hidden;
+    word-break: break-word;
 }
 
 html.dark .course-card {
@@ -653,8 +674,8 @@ html.dark .lesson-active-item {
         </div>
 
         <!-- Course Header Info Banner -->
-        <div class="course-card p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6">
-            <div class="space-y-3 text-center md:text-right w-full md:w-auto">
+        <div class="course-card p-4 sm:p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6">
+            <div class="space-y-3 text-center md:text-right w-full md:w-auto min-w-0">
                 <h1 class="text-2xl md:text-3xl font-black text-[#0d3753] dark:text-white">
                     <?= htmlspecialchars($course['title']) ?>
                 </h1>
@@ -682,7 +703,7 @@ html.dark .lesson-active-item {
 
             <!-- Enrollment Action / Price Block (If not full course enrolled) -->
             <?php if (!$isFullCourseAccess): ?>
-                <div class="text-center bg-slate-50 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 p-6 rounded-2xl w-full md:w-auto min-w-[260px] space-y-3 shrink-0">
+                <div class="text-center bg-slate-50 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 p-4 sm:p-6 rounded-2xl w-full md:w-auto md:min-w-[260px] space-y-3 shrink-0">
                     <div>
                         <span class="text-xs text-slate-400 block font-bold">اشتراك الكورس كاملاً</span>
                         <span class="text-2xl font-black text-primary block font-mono">
@@ -963,7 +984,7 @@ html.dark .lesson-active-item {
                         $passedQz = !empty($pInfo['passedQuiz']);
                         $quizItem = $pInfo['quiz'] ?? null;
                     ?>
-                    <div class="course-card p-6 md:p-12 space-y-6">
+                    <div class="course-card p-4 sm:p-6 md:p-12 space-y-6">
                         <div class="text-center space-y-3 max-w-xl mx-auto">
                             <div class="w-20 h-20 rounded-3xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 flex items-center justify-center text-3xl mx-auto shadow-inner border border-amber-200 dark:border-amber-800">
                                 <i class="fa-solid fa-lock"></i>
@@ -983,13 +1004,13 @@ html.dark .lesson-active-item {
                         <div class="max-w-xl mx-auto space-y-3 pt-2">
                             
                             <!-- 1. فيديو الشرح -->
-                            <div class="p-4 rounded-2xl border <?= $watchedExp ? 'border-emerald-200 bg-emerald-50/60 dark:border-emerald-900/50 dark:bg-emerald-950/20' : 'border-amber-200 bg-amber-50/50 dark:border-amber-900/40 dark:bg-amber-950/20' ?> flex items-center justify-between gap-3 shadow-sm">
-                                <div class="flex items-center gap-3">
+                            <div class="p-3.5 sm:p-4 rounded-2xl border <?= $watchedExp ? 'border-emerald-200 bg-emerald-50/60 dark:border-emerald-900/50 dark:bg-emerald-950/20' : 'border-amber-200 bg-amber-50/50 dark:border-amber-900/40 dark:bg-amber-950/20' ?> flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
+                                <div class="flex items-center gap-3 min-w-0">
                                     <div class="w-10 h-10 rounded-xl <?= $watchedExp ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40' : 'bg-amber-100 text-amber-600 dark:bg-amber-900/40' ?> flex items-center justify-center text-base shrink-0">
                                         <i class="fa-solid <?= $watchedExp ? 'fa-check' : 'fa-play' ?>"></i>
                                     </div>
-                                    <div>
-                                        <div class="text-xs sm:text-sm font-black text-slate-900 dark:text-white">
+                                    <div class="min-w-0">
+                                        <div class="text-xs sm:text-sm font-black text-slate-900 dark:text-white truncate">
                                             1. سماع فيديو الشرح
                                         </div>
                                         <div class="text-[11px] <?= $watchedExp ? 'text-emerald-600 dark:text-emerald-400 font-bold' : 'text-slate-500 dark:text-slate-400' ?>">
@@ -998,7 +1019,7 @@ html.dark .lesson-active-item {
                                     </div>
                                 </div>
                                 <?php if (!$watchedExp && $expVid): ?>
-                                    <a href="/course.php?id=<?= urlencode($courseId) ?>&v=<?= urlencode($expVid['id']) ?>" class="px-4 py-2 bg-primary hover:bg-teal-700 text-white font-bold text-xs rounded-xl shadow transition shrink-0 flex items-center gap-1.5">
+                                    <a href="/course.php?id=<?= urlencode($courseId) ?>&v=<?= urlencode($expVid['id']) ?>" class="w-full sm:w-auto px-4 py-2 bg-primary hover:bg-teal-700 text-white font-bold text-xs rounded-xl shadow transition shrink-0 flex items-center justify-center gap-1.5">
                                         <i class="fa-solid fa-play text-[10px]"></i> مشاهدة الشرح
                                     </a>
                                 <?php endif; ?>
@@ -1006,13 +1027,13 @@ html.dark .lesson-active-item {
 
                             <!-- 2. فيديو الحل والتدريبات -->
                             <?php if ($hasSol): ?>
-                                <div class="p-4 rounded-2xl border <?= $watchedSol ? 'border-emerald-200 bg-emerald-50/60 dark:border-emerald-900/50 dark:bg-emerald-950/20' : 'border-amber-200 bg-amber-50/50 dark:border-amber-900/40 dark:bg-amber-950/20' ?> flex items-center justify-between gap-3 shadow-sm">
-                                    <div class="flex items-center gap-3">
+                                <div class="p-3.5 sm:p-4 rounded-2xl border <?= $watchedSol ? 'border-emerald-200 bg-emerald-50/60 dark:border-emerald-900/50 dark:bg-emerald-950/20' : 'border-amber-200 bg-amber-50/50 dark:border-amber-900/40 dark:bg-amber-950/20' ?> flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
+                                    <div class="flex items-center gap-3 min-w-0">
                                         <div class="w-10 h-10 rounded-xl <?= $watchedSol ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40' : 'bg-amber-100 text-amber-600 dark:bg-amber-900/40' ?> flex items-center justify-center text-base shrink-0">
                                             <i class="fa-solid <?= $watchedSol ? 'fa-check' : 'fa-pen-to-square' ?>"></i>
                                         </div>
-                                        <div>
-                                            <div class="text-xs sm:text-sm font-black text-slate-900 dark:text-white">
+                                        <div class="min-w-0">
+                                            <div class="text-xs sm:text-sm font-black text-slate-900 dark:text-white truncate">
                                                 2. سماع فيديو الحل والتدريبات
                                             </div>
                                             <div class="text-[11px] <?= $watchedSol ? 'text-emerald-600 dark:text-emerald-400 font-bold' : 'text-slate-500 dark:text-slate-400' ?>">
@@ -1021,7 +1042,7 @@ html.dark .lesson-active-item {
                                         </div>
                                     </div>
                                     <?php if (!$watchedSol && $solVid): ?>
-                                        <a href="/course.php?id=<?= urlencode($courseId) ?>&v=<?= urlencode($solVid['id']) ?>" class="px-4 py-2 bg-primary hover:bg-teal-700 text-white font-bold text-xs rounded-xl shadow transition shrink-0 flex items-center gap-1.5">
+                                        <a href="/course.php?id=<?= urlencode($courseId) ?>&v=<?= urlencode($solVid['id']) ?>" class="w-full sm:w-auto px-4 py-2 bg-primary hover:bg-teal-700 text-white font-bold text-xs rounded-xl shadow transition shrink-0 flex items-center justify-center gap-1.5">
                                             <i class="fa-solid fa-play text-[10px]"></i> مشاهدة الحل
                                         </a>
                                     <?php endif; ?>
@@ -1030,13 +1051,13 @@ html.dark .lesson-active-item {
 
                             <!-- 3. تاسك / امتحان الحصة -->
                             <?php if ($hasQz): ?>
-                                <div class="p-4 rounded-2xl border <?= $passedQz ? 'border-emerald-200 bg-emerald-50/60 dark:border-emerald-900/50 dark:bg-emerald-950/20' : 'border-amber-200 bg-amber-50/50 dark:border-amber-900/40 dark:bg-amber-950/20' ?> flex items-center justify-between gap-3 shadow-sm">
-                                    <div class="flex items-center gap-3">
+                                <div class="p-3.5 sm:p-4 rounded-2xl border <?= $passedQz ? 'border-emerald-200 bg-emerald-50/60 dark:border-emerald-900/50 dark:bg-emerald-950/20' : 'border-amber-200 bg-amber-50/50 dark:border-amber-900/40 dark:bg-amber-950/20' ?> flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
+                                    <div class="flex items-center gap-3 min-w-0">
                                         <div class="w-10 h-10 rounded-xl <?= $passedQz ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40' : 'bg-amber-100 text-amber-600 dark:bg-amber-900/40' ?> flex items-center justify-center text-base shrink-0">
                                             <i class="fa-solid <?= $passedQz ? 'fa-check' : 'fa-award' ?>"></i>
                                         </div>
-                                        <div>
-                                            <div class="text-xs sm:text-sm font-black text-slate-900 dark:text-white">
+                                        <div class="min-w-0">
+                                            <div class="text-xs sm:text-sm font-black text-slate-900 dark:text-white truncate">
                                                 3. اجتياز تاسك / امتحان الحصة (50% فأعلى)
                                             </div>
                                             <div class="text-[11px] <?= $passedQz ? 'text-emerald-600 dark:text-emerald-400 font-bold' : 'text-slate-500 dark:text-slate-400' ?>">
@@ -1045,7 +1066,7 @@ html.dark .lesson-active-item {
                                         </div>
                                     </div>
                                     <?php if (!$passedQz && $quizItem): ?>
-                                        <a href="/quiz.php?id=<?= urlencode($quizItem['id']) ?>" class="px-4 py-2 bg-primary hover:bg-teal-700 text-white font-bold text-xs rounded-xl shadow transition shrink-0 flex items-center gap-1.5">
+                                        <a href="/quiz.php?id=<?= urlencode($quizItem['id']) ?>" class="w-full sm:w-auto px-4 py-2 bg-primary hover:bg-teal-700 text-white font-bold text-xs rounded-xl shadow transition shrink-0 flex items-center justify-center gap-1.5">
                                             <i class="fa-solid fa-pen-to-square text-[10px]"></i> بدء الامتحان الآن
                                         </a>
                                     <?php endif; ?>
@@ -1057,9 +1078,9 @@ html.dark .lesson-active-item {
                         <!-- Back to Previous Lesson -->
                         <div class="text-center pt-2">
                             <?php if ($prevId): ?>
-                                <a href="/course.php?id=<?= urlencode($courseId) ?>&col=<?= urlencode($prevId) ?>" class="inline-flex items-center gap-2 px-6 py-3 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-200 font-black text-xs rounded-2xl transition shadow-sm">
+                                <a href="/course.php?id=<?= urlencode($courseId) ?>&col=<?= urlencode($prevId) ?>" class="inline-flex items-center justify-center gap-2 px-6 py-3 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-200 font-black text-xs rounded-2xl transition shadow-sm max-w-full">
                                     <i class="fa-solid fa-arrow-right"></i>
-                                    <span>العودة للحصة السابقة ("<?= htmlspecialchars($prevTitle) ?>")</span>
+                                    <span class="truncate">العودة للحصة السابقة ("<?= htmlspecialchars($prevTitle) ?>")</span>
                                 </a>
                             <?php endif; ?>
                         </div>
@@ -1067,7 +1088,7 @@ html.dark .lesson-active-item {
 
                 <?php elseif ($hasSelectedLesson && $activeCollection && !$activeCollection['isPurchased']): ?>
                     <!-- 3. UNPURCHASED SINGLE LESSON LOCK SCREEN WITH INLINE CODE REDEEM -->
-                    <div class="course-card p-8 md:p-14 text-center space-y-6">
+                    <div class="course-card p-4 sm:p-6 md:p-14 text-center space-y-6">
                         <div class="w-20 h-20 rounded-3xl bg-amber-50 dark:bg-amber-950/40 text-gold-custom flex items-center justify-center text-3xl mx-auto shadow-inner border border-amber-200 dark:border-amber-800">
                             <i class="fa-solid fa-lock"></i>
                         </div>
@@ -1084,35 +1105,35 @@ html.dark .lesson-active-item {
                         </div>
 
                         <!-- Instant Direct Code Redemption for this Lesson -->
-                        <div class="max-w-md mx-auto bg-slate-50 dark:bg-slate-800/60 p-5 rounded-3xl border border-slate-200 dark:border-slate-700 space-y-3 shadow-inner">
+                        <div class="max-w-md mx-auto bg-slate-50 dark:bg-slate-800/60 p-4 sm:p-5 rounded-3xl border border-slate-200 dark:border-slate-700 space-y-3 shadow-inner">
                             <label class="block text-xs font-black text-slate-700 dark:text-slate-300 text-right">
                                 <i class="fa-solid fa-key text-gold-custom ml-1"></i> تفعيل كود الحصة مباشرة في حسابك:
                             </label>
-                            <div class="flex gap-2">
-                                <input type="text" id="directLessonCodeInput" placeholder="أدخل كود الحصة (مثال: HSA-XXXXX)" class="flex-1 px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-xl text-xs font-bold font-mono uppercase text-slate-800 dark:text-white outline-none focus:border-primary">
-                                <button type="button" id="directLessonBtn" onclick="redeemDirectLessonCode()" class="px-5 py-2.5 bg-primary hover:bg-teal-700 text-white font-bold text-xs rounded-xl shadow transition shrink-0 flex items-center gap-1.5">
+                            <div class="flex flex-col sm:flex-row gap-2">
+                                <input type="text" id="directLessonCodeInput" placeholder="أدخل كود الحصة (مثال: HSA-XXXXX)" class="w-full sm:flex-1 px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-xl text-xs font-bold font-mono uppercase text-slate-800 dark:text-white outline-none focus:border-primary text-center sm:text-right min-w-0">
+                                <button type="button" id="directLessonBtn" onclick="redeemDirectLessonCode()" class="w-full sm:w-auto px-5 py-2.5 bg-primary hover:bg-teal-700 text-white font-bold text-xs rounded-xl shadow transition shrink-0 flex items-center justify-center gap-1.5">
                                     <i class="fa-solid fa-bolt"></i> تفعيل الحصة
                                 </button>
                             </div>
                             <div id="directLessonAlert" class="text-xs font-bold p-3 rounded-xl hidden"></div>
                         </div>
 
-                        <div class="flex flex-wrap items-center justify-center gap-3 pt-2">
-                            <a href="https://wa.me/201092037257?text=<?= urlencode('السلام عليكم، أود الحصول على كود تفعيل لحصة: ' . $activeCollection['title'] . ' في كورس: ' . $course['title']) ?>" target="_blank" class="px-6 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-2xl shadow-lg transition flex items-center gap-2">
+                        <div class="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2 w-full max-w-md mx-auto">
+                            <a href="https://wa.me/201092037257?text=<?= urlencode('السلام عليكم، أود الحصول على كود تفعيل لحصة: ' . $activeCollection['title'] . ' في كورس: ' . $course['title']) ?>" target="_blank" class="w-full sm:w-auto px-6 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-2xl shadow-lg transition flex items-center justify-center gap-2">
                                 <i class="fa-brands fa-whatsapp text-sm"></i>
                                 <span>طلب كود الحصة عبر واتساب</span>
                             </a>
 
-                            <a href="/purchase.php?id=<?= urlencode($courseId) ?>" class="px-5 py-3.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 font-bold text-xs rounded-2xl transition flex items-center gap-2">
+                            <a href="/purchase.php?id=<?= urlencode($courseId) ?>" class="w-full sm:w-auto px-5 py-3.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 font-bold text-xs rounded-2xl transition flex items-center justify-center gap-2">
                                 <i class="fa-solid fa-graduation-cap"></i>
-                                <span>أو الاشتراك في الكورس بالكامل (<?= number_format($course['price'], 0) ?> ج.م)</span>
+                                <span>أو الاشتراك بالكامل (<?= number_format($course['price'], 0) ?> ج.م)</span>
                             </a>
                         </div>
                     </div>
 
                 <?php else: ?>
                     <!-- 4. WELCOMING COURSE OVERVIEW (NO LESSON PICKED YET) -->
-                    <div class="course-card p-8 md:p-12 space-y-6">
+                    <div class="course-card p-4 sm:p-6 md:p-12 space-y-6">
                         <div class="text-center max-w-xl mx-auto space-y-2">
                             <span class="inline-block px-3.5 py-1 bg-teal-100 text-teal-800 dark:bg-teal-900/40 dark:text-teal-300 text-xs font-black rounded-full mb-1">
                                 📚 خريطة وفهرس حصص الكورس
@@ -1127,7 +1148,7 @@ html.dark .lesson-active-item {
 
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
                             <?php foreach ($collections as $cIdx => $cItem): ?>
-                                <div class="p-5 rounded-3xl border <?= $cItem['isUnlocked'] ? 'border-teal-200 bg-teal-50/30 dark:border-teal-900/40 dark:bg-teal-950/20' : 'border-slate-200 bg-slate-50/50 dark:border-slate-800 dark:bg-slate-900/30' ?> flex flex-col justify-between space-y-4 shadow-sm hover:shadow-md transition">
+                                <div class="p-3.5 sm:p-5 rounded-3xl border <?= $cItem['isUnlocked'] ? 'border-teal-200 bg-teal-50/30 dark:border-teal-900/40 dark:bg-teal-950/20' : 'border-slate-200 bg-slate-50/50 dark:border-slate-800 dark:bg-slate-900/30' ?> flex flex-col justify-between space-y-4 shadow-sm hover:shadow-md transition">
                                     <div>
                                         <div class="flex items-center justify-between mb-2.5">
                                             <span class="w-7 h-7 rounded-full bg-primary text-white flex items-center justify-center text-xs font-black shadow-sm">
@@ -1152,22 +1173,22 @@ html.dark .lesson-active-item {
                                         </h3>
                                         
                                         <!-- 4 components display: شرح + حل + تلخيص + تاسك -->
-                                        <div class="grid grid-cols-2 gap-1.5 text-[10px] font-bold mt-3">
-                                            <div class="p-1.5 rounded-lg bg-white/80 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-700 flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
-                                                <i class="fa-solid fa-play text-emerald-500"></i>
-                                                <span>فيديو الشرح</span>
+                                        <div class="grid grid-cols-2 gap-1.5 text-[9px] sm:text-[10px] font-bold mt-3">
+                                            <div class="p-1.5 rounded-lg bg-white/80 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-700 flex items-center gap-1 text-slate-600 dark:text-slate-300 min-w-0">
+                                                <i class="fa-solid fa-play text-emerald-500 shrink-0"></i>
+                                                <span class="truncate">فيديو الشرح</span>
                                             </div>
-                                            <div class="p-1.5 rounded-lg bg-white/80 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-700 flex items-center gap-1.5 <?= !empty($cItem['videos'][1]) ? 'text-slate-600 dark:text-slate-300' : 'text-slate-400' ?>">
-                                                <i class="fa-solid fa-pen-to-square text-teal-600"></i>
-                                                <span>فيديو الحل</span>
+                                            <div class="p-1.5 rounded-lg bg-white/80 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-700 flex items-center gap-1 <?= !empty($cItem['videos'][1]) ? 'text-slate-600 dark:text-slate-300' : 'text-slate-400' ?> min-w-0">
+                                                <i class="fa-solid fa-pen-to-square text-teal-600 shrink-0"></i>
+                                                <span class="truncate">فيديو الحل</span>
                                             </div>
-                                            <div class="p-1.5 rounded-lg bg-white/80 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-700 flex items-center gap-1.5 <?= !empty($cItem['files']) ? 'text-slate-600 dark:text-slate-300' : 'text-slate-400' ?>">
-                                                <i class="fa-solid fa-file-pdf text-red-500"></i>
-                                                <span>ملخص الدرس PDF</span>
+                                            <div class="p-1.5 rounded-lg bg-white/80 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-700 flex items-center gap-1 <?= !empty($cItem['files']) ? 'text-slate-600 dark:text-slate-300' : 'text-slate-400' ?> min-w-0">
+                                                <i class="fa-solid fa-file-pdf text-red-500 shrink-0"></i>
+                                                <span class="truncate">ملخص الدرس</span>
                                             </div>
-                                            <div class="p-1.5 rounded-lg bg-white/80 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-700 flex items-center gap-1.5 <?= !empty($cItem['quizzes']) ? 'text-amber-700 dark:text-amber-400' : 'text-slate-400' ?>">
-                                                <i class="fa-solid fa-award text-amber-500"></i>
-                                                <span>تاسك / امتحان</span>
+                                            <div class="p-1.5 rounded-lg bg-white/80 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-700 flex items-center gap-1 <?= !empty($cItem['quizzes']) ? 'text-amber-700 dark:text-amber-400' : 'text-slate-400' ?> min-w-0">
+                                                <i class="fa-solid fa-award text-amber-500 shrink-0"></i>
+                                                <span class="truncate">تاسك / امتحان</span>
                                             </div>
                                         </div>
                                     </div>
@@ -1199,7 +1220,7 @@ html.dark .lesson-active-item {
             </div>
 
             <!-- SIDEBAR: Syllabus & Lessons Playlist -->
-            <div class="course-card p-5 md:p-6 space-y-6">
+            <div class="course-card p-4 sm:p-5 md:p-6 space-y-6">
                 
                 <!-- Sidebar Header -->
                 <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">

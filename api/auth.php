@@ -94,6 +94,10 @@ if ($action === 'login') {
     $db->prepare("UPDATE User SET lastLoginAt = NOW() WHERE id = ?")->execute([$user['id']]);
 
     $_SESSION['user_id'] = $user['id'];
+    $_SESSION['user_phone'] = $user['phone'];
+    $_SESSION['user_role'] = $user['role'];
+    $_SESSION['user_name'] = $user['fullName'] ?? $user['firstName'];
+    setRememberToken($user['id'], $user['password']);
 
     $redirect = in_array($user['role'], ['ADMIN', 'SUPERADMIN']) ? '/admin/index.php' : '/profile.php';
 
@@ -175,6 +179,10 @@ if ($action === 'register') {
 
     if ($status === 'ACTIVE') {
         $_SESSION['user_id'] = $userId;
+        $_SESSION['user_phone'] = $phone;
+        $_SESSION['user_role'] = 'STUDENT';
+        $_SESSION['user_name'] = $fullName;
+        setRememberToken($userId, $password);
         jsonResponse([
             'success' => true,
             'message' => 'تم إنشاء الحساب بنجاح! تم تسجيل دخولك تلقائياً',
@@ -191,6 +199,7 @@ if ($action === 'register') {
 
 if ($action === 'logout') {
     unset($_SESSION['user_id']);
+    clearRememberToken();
     session_destroy();
     jsonResponse(['success' => true, 'redirect' => '/login.php']);
 }

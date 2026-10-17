@@ -84,6 +84,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $_SESSION['user_phone'] = $user['phone'];
                     $_SESSION['user_role'] = $user['role'];
                     $_SESSION['user_name'] = $user['fullName'] ?? $user['firstName'];
+                    setRememberToken($user['id'], $user['password']);
 
                     if (in_array($user['role'], ['ADMIN', 'SUPERADMIN'])) {
                         header('Location: /admin/index.php');

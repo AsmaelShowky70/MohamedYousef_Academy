@@ -80,19 +80,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_quiz'])) {
     $answers = $_POST['answers'] ?? [];
     $solvedCorrectly = [];
     $totalQuestions = count($questions);
+    $totalPoints = 0;
+    $earnedPoints = 0;
 
     foreach ($questions as $q) {
         $qId = $q['id'];
+        $qPts = max(1, (int)($q['points'] ?? 1));
+        $totalPoints += $qPts;
+
         $studentAns = trim($answers[$qId] ?? '');
         $correctAns = trim($q['rightAnswer']);
 
         if ($studentAns !== '' && mb_strtolower($studentAns) === mb_strtolower($correctAns)) {
             $solvedCorrectly[] = $qId;
+            $earnedPoints += $qPts;
         }
     }
 
-    $score = count($solvedCorrectly);
-    $percentage = $totalQuestions > 0 ? round(($score / $totalQuestions) * 100) : 0;
+    $percentage = $totalPoints > 0 ? round(($earnedPoints / $totalPoints) * 100) : 0;
     $isPassed = ($percentage >= 50);
 
     // Save Attempt
@@ -132,8 +137,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_quiz'])) {
     }
 
     $resultData = [
-        'score' => $score,
-        'total' => $totalQuestions,
+        'score' => $earnedPoints,
+        'total' => $totalPoints,
+        'solvedCount' => count($solvedCorrectly),
+        'totalQuestions' => $totalQuestions,
         'percentage' => $percentage,
         'isPassed' => $isPassed
     ];
@@ -305,9 +312,15 @@ require_once __DIR__ . '/includes/header.php';
                     ?>
                     <div class="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-sm space-y-4">
                         <div class="flex items-start justify-between gap-3">
-                            <span class="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-primary text-white font-black text-xs shrink-0 shadow-sm">
-                                <?= $qIdx + 1 ?>
-                            </span>
+                            <div class="flex items-center gap-2 shrink-0">
+                                <span class="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-primary text-white font-black text-xs shadow-sm">
+                                    <?= $qIdx + 1 ?>
+                                </span>
+                                <?php $qPoints = max(1, (int)($q['points'] ?? 1)); ?>
+                                <span class="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800/80">
+                                    <?= $qPoints ?> <?= $qPoints == 1 ? 'درجة' : 'درجات' ?>
+                                </span>
+                            </div>
                             <div class="flex-1 text-sm sm:text-base font-bold text-slate-900 dark:text-white leading-relaxed">
                                 <?= nl2br(htmlspecialchars($q['questionHead'])) ?>
                             </div>

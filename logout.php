@@ -3,6 +3,7 @@ require_once __DIR__ . '/config/helpers.php';
 
 // Unset all session variables
 $_SESSION = [];
+clearRememberToken();
 
 if (ini_get("session.use_cookies")) {
     $params = session_get_cookie_params();

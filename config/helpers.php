@@ -8,10 +8,54 @@ if (ob_get_level() === 0) {
 }
 
 if (session_status() === PHP_SESSION_NONE) {
+    $lifetime = 30 * 24 * 60 * 60; // 30 days
+    ini_set('session.gc_maxlifetime', (string)$lifetime);
+    ini_set('session.cookie_lifetime', (string)$lifetime);
+    if (!headers_sent()) {
+        session_set_cookie_params([
+            'lifetime' => $lifetime,
+            'path' => '/',
+            'domain' => '',
+            'secure' => (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off'),
+            'httponly' => true,
+            'samesite' => 'Lax'
+        ]);
+    }
     session_start();
 }
 
 require_once __DIR__ . '/db.php';
+
+function setRememberToken($userId, $passwordHash) {
+    $secretKey = 'MohamedYousef_SecretAuthKey_2026';
+    $hash = hash_hmac('sha256', $userId . $passwordHash, $secretKey);
+    $token = $userId . ':' . $hash;
+    $expire = time() + (30 * 24 * 60 * 60); // 30 days
+    $secure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
+    setcookie('my_remember_token', $token, [
+        'expires' => $expire,
+        'path' => '/',
+        'domain' => '',
+        'secure' => $secure,
+        'httponly' => true,
+        'samesite' => 'Lax'
+    ]);
+}
+
+function clearRememberToken() {
+    $secure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
+    setcookie('my_remember_token', '', [
+        'expires' => time() - 86400,
+        'path' => '/',
+        'domain' => '',
+        'secure' => $secure,
+        'httponly' => true,
+        'samesite' => 'Lax'
+    ]);
+    if (isset($_COOKIE['my_remember_token'])) {
+        unset($_COOKIE['my_remember_token']);
+    }
+}
 
 function jsonResponse($data, $statusCode = 200) {
     http_response_code($statusCode);
@@ -46,15 +90,40 @@ function generateCode($prefix = 'MY') {
 }
 
 function getCurrentUser() {
+    $db = getDB();
+
+    // Auto-login from persistent remember token if session is empty
+    if (empty($_SESSION['user_id']) && !empty($_COOKIE['my_remember_token'])) {
+        $parts = explode(':', $_COOKIE['my_remember_token'], 2);
+        if (count($parts) === 2) {
+            $cUserId = $parts[0];
+            $cHash = $parts[1];
+            $uStmt = $db->prepare("SELECT * FROM User WHERE id = ? LIMIT 1");
+            $uStmt->execute([$cUserId]);
+            $candidate = $uStmt->fetch();
+            if ($candidate && $candidate['status'] !== 'BANNED') {
+                $secretKey = 'MohamedYousef_SecretAuthKey_2026';
+                $expectedHash = hash_hmac('sha256', $candidate['id'] . $candidate['password'], $secretKey);
+                if (hash_equals($expectedHash, $cHash)) {
+                    $_SESSION['user_id'] = $candidate['id'];
+                    $_SESSION['user_phone'] = $candidate['phone'];
+                    $_SESSION['user_role'] = $candidate['role'];
+                    $_SESSION['user_name'] = $candidate['fullName'] ?? $candidate['firstName'];
+                }
+            }
+        }
+    }
+
     if (empty($_SESSION['user_id'])) {
         return null;
     }
-    $db = getDB();
+
     $stmt = $db->prepare("SELECT * FROM User WHERE id = ?");
     $stmt->execute([$_SESSION['user_id']]);
     $user = $stmt->fetch();
     if (!$user || $user['status'] === 'BANNED') {
         unset($_SESSION['user_id']);
+        clearRememberToken();
         return null;
     }
 
@@ -77,6 +146,7 @@ function getCurrentUser() {
             if (!$isAuthorized) {
                 // Device not authorized or was unbound by Admin! Log out.
                 unset($_SESSION['user_id']);
+                clearRememberToken();
                 return null;
             }
         }

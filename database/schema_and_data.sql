@@ -364,6 +364,7 @@ CREATE TABLE `Question` (
   `questionHead` text NOT NULL,
   `options` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL CHECK (json_valid(`options`)),
   `rightAnswer` text NOT NULL,
+  `points` int(11) NOT NULL DEFAULT 1,
   `image` text DEFAULT NULL,
   `quizId` varchar(50) NOT NULL,
   `order` int(11) DEFAULT 0,

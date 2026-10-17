@@ -43,6 +43,19 @@ try {
     echo "[!] Error adding columns to User: " . $e->getMessage() . "\n";
 }
 
+// 1.5 Add points column to Question table
+try {
+    $qCols = $db->query("SHOW COLUMNS FROM Question LIKE 'points'")->fetchAll();
+    if (empty($qCols)) {
+        $db->exec("ALTER TABLE Question ADD COLUMN points INT(11) NOT NULL DEFAULT 1 AFTER rightAnswer");
+        echo "[✓] Column points added to Question table.\n";
+    } else {
+        echo "[i] Column points already exists in Question table.\n";
+    }
+} catch (Exception $e) {
+    echo "[!] Error adding points to Question: " . $e->getMessage() . "\n";
+}
+
 // 2. Ensure default sections exist for all academic years
 try {
     $years = $db->query("SELECT id, name FROM Year")->fetchAll();

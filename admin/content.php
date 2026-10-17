@@ -170,9 +170,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_content'])) {
                             $qRight = trim($q['right_written'] ?? $qRight);
                         }
 
+                        $qPoints = max(1, (int)($q['points'] ?? 1));
                         $qId = generateId(5);
-                        $insQ = $db->prepare("INSERT INTO Question (id, questionHead, options, rightAnswer, image, quizId, `order`) VALUES (?, ?, ?, ?, ?, ?, ?)");
-                        $insQ->execute([$qId, $qHead, json_encode($qOpts, JSON_UNESCAPED_UNICODE), $qRight, $qImg ?: null, $quizId, $qOrder++]);
+
+                        try {
+                            $insQ = $db->prepare("INSERT INTO Question (id, questionHead, options, rightAnswer, points, image, quizId, `order`) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+                            $insQ->execute([$qId, $qHead, json_encode($qOpts, JSON_UNESCAPED_UNICODE), $qRight, $qPoints, $qImg ?: null, $quizId, $qOrder++]);
+                        } catch (Exception $e) {
+                            if (strpos($e->getMessage(), 'Unknown column') !== false || strpos($e->getMessage(), 'points') !== false) {
+                                $db->exec("ALTER TABLE Question ADD COLUMN points INT(11) NOT NULL DEFAULT 1 AFTER rightAnswer");
+                                $insQ = $db->prepare("INSERT INTO Question (id, questionHead, options, rightAnswer, points, image, quizId, `order`) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+                                $insQ->execute([$qId, $qHead, json_encode($qOpts, JSON_UNESCAPED_UNICODE), $qRight, $qPoints, $qImg ?: null, $quizId, $qOrder++]);
+                            } else {
+                                throw $e;
+                            }
+                        }
                     }
                 }
                 $_SESSION['content_msg_type'] = 'success';
@@ -694,16 +706,107 @@ function setVideoSource(src) {
     }
 }
 
-function isRadioChecked(qIdx, optIdx) {
-    const r = document.querySelector(`input[name="questions[${qIdx}][correct_index]"][value="${optIdx}"]`);
-    return r && r.checked;
+const arabicLetters = ['أ', 'ب', 'ج', 'د', 'هـ', 'و', 'ز', 'ح', 'ط', 'ي', 'ك', 'ل', 'م', 'ن'];
+
+function syncCorrectRadio(qIdx) {
+    const list = document.getElementById(`opts_list_${qIdx}`);
+    const rightInp = document.getElementById(`q_${qIdx}_right`);
+    if (!list || !rightInp) return;
+
+    const checkedRadio = list.querySelector(`input[name="questions[${qIdx}][correct_index]"]:checked`);
+    if (checkedRadio) {
+        const optRow = checkedRadio.closest('.opt-row');
+        if (optRow) {
+            const textInp = optRow.querySelector('input[type="text"]');
+            if (textInp) {
+                rightInp.value = textInp.value.trim();
+            }
+        }
+    }
 }
 
-function syncCorrectRadio(qIdx, optIdx) {
-    const inp = document.getElementById(`q_${qIdx}_opt_${optIdx}`);
-    const rightInp = document.getElementById(`q_${qIdx}_right`);
-    if (inp && rightInp) {
-        rightInp.value = inp.value.trim();
+function reindexQuestionOptions(qIdx) {
+    const list = document.getElementById(`opts_list_${qIdx}`);
+    if (!list) return;
+
+    const rows = list.querySelectorAll('.opt-row');
+    const checkedIndex = Array.from(rows).findIndex(r => {
+        const rad = r.querySelector('input[type="radio"]');
+        return rad && rad.checked;
+    });
+
+    rows.forEach((row, i) => {
+        row.id = `q_${qIdx}_opt_row_${i}`;
+        const letter = arabicLetters[i] || (i + 1);
+        const letterSpan = row.querySelector('.opt-letter');
+        if (letterSpan) letterSpan.textContent = letter;
+
+        const input = row.querySelector('input[type="text"]');
+        if (input) {
+            input.name = `questions[${qIdx}][options][${i}]`;
+            input.id = `q_${qIdx}_opt_${i}`;
+            input.placeholder = `نص الخيار (${letter})`;
+        }
+
+        const radio = row.querySelector('input[type="radio"]');
+        if (radio) {
+            radio.value = i;
+            if (checkedIndex === -1 && i === 0) {
+                radio.checked = true;
+            }
+        }
+
+        const delBtn = row.querySelector('.btn-del-opt');
+        if (delBtn) {
+            delBtn.style.visibility = (rows.length <= 2) ? 'hidden' : 'visible';
+        }
+    });
+}
+
+function addOptionToQuestion(qIdx) {
+    const list = document.getElementById(`opts_list_${qIdx}`);
+    if (!list) return;
+
+    const optIndex = list.children.length;
+    const letter = arabicLetters[optIndex] || (optIndex + 1);
+
+    const row = document.createElement('div');
+    row.className = 'opt-row flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-white p-2.5 rounded-xl border border-slate-200 shadow-xs transition';
+    row.id = `q_${qIdx}_opt_row_${optIndex}`;
+
+    row.innerHTML = `
+        <div class="flex items-center gap-2 flex-1">
+            <span class="text-xs font-black text-slate-600 w-6 text-center opt-letter bg-slate-100 rounded py-1 shrink-0">${letter}</span>
+            <input type="text" name="questions[${qIdx}][options][${optIndex}]" id="q_${qIdx}_opt_${optIndex}" oninput="syncCorrectRadio(${qIdx})" placeholder="نص الخيار (${letter})" class="flex-1 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold outline-none focus:border-[#0f766e] focus:bg-white" required/>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+            <label class="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-emerald-50 hover:border-emerald-500 cursor-pointer text-xs font-bold text-slate-700 transition">
+                <input type="radio" name="questions[${qIdx}][correct_index]" value="${optIndex}" ${optIndex === 0 ? 'checked' : ''} onchange="syncCorrectRadio(${qIdx})" class="accent-emerald-600 w-4 h-4"/>
+                <span>الإجابة الصحيحة</span>
+            </label>
+            <button type="button" onclick="removeOptionFromQuestion(${qIdx}, this)" class="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition btn-del-opt" title="حذف هذا الخيار">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
+            </button>
+        </div>
+    `;
+
+    list.appendChild(row);
+    reindexQuestionOptions(qIdx);
+    syncCorrectRadio(qIdx);
+}
+
+function removeOptionFromQuestion(qIdx, btn) {
+    const list = document.getElementById(`opts_list_${qIdx}`);
+    if (!list) return;
+    if (list.children.length <= 2) {
+        alert('يجب أن يحتوي السؤال على خيارين على الأقل (مثل: صح / خطأ).');
+        return;
+    }
+    const row = btn.closest('.opt-row');
+    if (row) {
+        row.remove();
+        reindexQuestionOptions(qIdx);
+        syncCorrectRadio(qIdx);
     }
 }
 
@@ -713,11 +816,18 @@ function addQuestionItem() {
     const qDiv = document.createElement('div');
     qDiv.className = 'border border-slate-200 rounded-2xl p-4 sm:p-5 bg-slate-50/70 space-y-3.5 relative shadow-sm';
     qDiv.id = `q_card_${idx}`;
+    qDiv.setAttribute('data-q-idx', idx);
 
     qDiv.innerHTML = `
         <div class="flex items-center justify-between border-b border-slate-200 pb-2.5">
-            <span class="font-black text-xs text-[#0d3753] bg-teal-50 text-teal-800 border border-teal-200 px-3 py-1 rounded-lg">السؤال #${idx + 1}</span>
-            <button type="button" onclick="document.getElementById('q_card_${idx}').remove()" class="text-red-500 hover:text-red-700 p-1 rounded-lg hover:bg-red-50 transition">
+            <div class="flex items-center gap-2">
+                <span class="font-black text-xs text-[#0d3753] bg-teal-50 text-teal-800 border border-teal-200 px-3 py-1 rounded-lg">السؤال #${idx + 1}</span>
+                <div class="flex items-center gap-1.5 bg-white border border-slate-200 px-2.5 py-1 rounded-lg shadow-xs">
+                    <label class="text-[11px] font-bold text-slate-600">درجة السؤال:</label>
+                    <input type="number" name="questions[${idx}][points]" value="1" min="1" max="100" class="w-14 text-center text-xs font-black text-[#0f766e] bg-slate-50 border border-slate-200 rounded outline-none focus:border-[#0f766e] py-0.5" title="حدد درجة هذا السؤال في الامتحان"/>
+                </div>
+            </div>
+            <button type="button" onclick="document.getElementById('q_card_${idx}').remove()" class="text-red-500 hover:text-red-700 p-1.5 rounded-lg hover:bg-red-50 transition" title="حذف السؤال بالكامل">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
             </button>
         </div>
@@ -746,59 +856,19 @@ function addQuestionItem() {
 
         <!-- Options Container for MCQ -->
         <div id="q_options_${idx}" class="space-y-2.5 pt-1">
-            <div class="flex items-center justify-between">
-                <label class="block text-xs font-bold text-slate-700">الخيارات الأربعة (حدد الإجابة الصحيحة بالزر المجاور للخيار)</label>
-                <span class="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">🔘 علم على الإجابة الصحيحة</span>
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200/60 pb-2">
+                <div>
+                    <label class="block text-xs font-bold text-slate-800">خيارات الإجابة (حدد الإجابة الصحيحة بالزر المجاور للخيار)</label>
+                    <span class="text-[11px] text-slate-500 font-medium">الافتراضي خيارين (مثل: صح / خطأ). اضغط زر الزائد لزيادة الخيارات</span>
+                </div>
+                <button type="button" onclick="addOptionToQuestion(${idx})" class="self-start sm:self-auto px-3 py-1.5 bg-teal-50 hover:bg-teal-100 text-[#0f766e] border border-teal-300 font-bold text-xs rounded-xl transition flex items-center gap-1.5 shadow-xs">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    <span>إضافة خيار إضافي</span>
+                </button>
             </div>
             
-            <div id="opts_list_${idx}" class="space-y-2">
-                <!-- Option A -->
-                <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-white p-2.5 rounded-xl border border-slate-200">
-                    <div class="flex items-center gap-2 flex-1">
-                        <span class="text-xs font-black text-slate-500 w-5 text-center">أ</span>
-                        <input type="text" name="questions[${idx}][options][0]" id="q_${idx}_opt_0" oninput="if(isRadioChecked(${idx}, 0)) syncCorrectRadio(${idx}, 0)" placeholder="نص الخيار (أ)" class="flex-1 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold outline-none focus:border-[#0f766e] focus:bg-white"/>
-                    </div>
-                    <label class="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-emerald-50 hover:border-emerald-500 cursor-pointer text-xs font-bold text-slate-700 transition">
-                        <input type="radio" name="questions[${idx}][correct_index]" value="0" checked onchange="syncCorrectRadio(${idx}, 0)" class="accent-emerald-600 w-4 h-4"/>
-                        <span>الإجابة الصحيحة</span>
-                    </label>
-                </div>
-
-                <!-- Option B -->
-                <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-white p-2.5 rounded-xl border border-slate-200">
-                    <div class="flex items-center gap-2 flex-1">
-                        <span class="text-xs font-black text-slate-500 w-5 text-center">ب</span>
-                        <input type="text" name="questions[${idx}][options][1]" id="q_${idx}_opt_1" oninput="if(isRadioChecked(${idx}, 1)) syncCorrectRadio(${idx}, 1)" placeholder="نص الخيار (ب)" class="flex-1 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold outline-none focus:border-[#0f766e] focus:bg-white"/>
-                    </div>
-                    <label class="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-emerald-50 hover:border-emerald-500 cursor-pointer text-xs font-bold text-slate-700 transition">
-                        <input type="radio" name="questions[${idx}][correct_index]" value="1" onchange="syncCorrectRadio(${idx}, 1)" class="accent-emerald-600 w-4 h-4"/>
-                        <span>الإجابة الصحيحة</span>
-                    </label>
-                </div>
-
-                <!-- Option C -->
-                <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-white p-2.5 rounded-xl border border-slate-200">
-                    <div class="flex items-center gap-2 flex-1">
-                        <span class="text-xs font-black text-slate-500 w-5 text-center">ج</span>
-                        <input type="text" name="questions[${idx}][options][2]" id="q_${idx}_opt_2" oninput="if(isRadioChecked(${idx}, 2)) syncCorrectRadio(${idx}, 2)" placeholder="نص الخيار (ج)" class="flex-1 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold outline-none focus:border-[#0f766e] focus:bg-white"/>
-                    </div>
-                    <label class="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-emerald-50 hover:border-emerald-500 cursor-pointer text-xs font-bold text-slate-700 transition">
-                        <input type="radio" name="questions[${idx}][correct_index]" value="2" onchange="syncCorrectRadio(${idx}, 2)" class="accent-emerald-600 w-4 h-4"/>
-                        <span>الإجابة الصحيحة</span>
-                    </label>
-                </div>
-
-                <!-- Option D -->
-                <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-white p-2.5 rounded-xl border border-slate-200">
-                    <div class="flex items-center gap-2 flex-1">
-                        <span class="text-xs font-black text-slate-500 w-5 text-center">د</span>
-                        <input type="text" name="questions[${idx}][options][3]" id="q_${idx}_opt_3" oninput="if(isRadioChecked(${idx}, 3)) syncCorrectRadio(${idx}, 3)" placeholder="نص الخيار (د)" class="flex-1 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold outline-none focus:border-[#0f766e] focus:bg-white"/>
-                    </div>
-                    <label class="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-emerald-50 hover:border-emerald-500 cursor-pointer text-xs font-bold text-slate-700 transition">
-                        <input type="radio" name="questions[${idx}][correct_index]" value="3" onchange="syncCorrectRadio(${idx}, 3)" class="accent-emerald-600 w-4 h-4"/>
-                        <span>الإجابة الصحيحة</span>
-                    </label>
-                </div>
+            <div id="opts_list_${idx}" class="space-y-2 pt-1">
+                <!-- Injected dynamically: exactly 2 default options -->
             </div>
 
             <!-- Hidden right input fallback -->
@@ -813,6 +883,10 @@ function addQuestionItem() {
     `;
 
     container.appendChild(qDiv);
+
+    // Initialize with exactly 2 default options (Option 1 & Option 2)
+    addOptionToQuestion(idx);
+    addOptionToQuestion(idx);
 }
 
 function toggleQuestionType(idx, type) {
