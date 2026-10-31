@@ -171,6 +171,13 @@ $collectionsByCourse = [];
 foreach ($rawCollections as $col) {
     $collectionsByCourse[$col['courseId']][] = $col;
 }
+
+// Fetch all videos grouped by collectionId (#17)
+$rawVideos = $db->query("SELECT id, title, link, collectionId, courseId FROM Video ORDER BY `order` ASC, id ASC")->fetchAll();
+$videosByCollection = [];
+foreach ($rawVideos as $v) {
+    $videosByCollection[$v['collectionId']][] = $v;
+}
 ?>
 
 <!-- Title & Action -->
@@ -248,7 +255,7 @@ foreach ($rawCollections as $col) {
                             <i class="fa-solid fa-pen-to-square"></i>
                             <span>تعديل</span>
                         </button>
-                        <a href="courses.php?action=delete&courseId=<?= urlencode($c['id']) ?>" onclick="return confirm('تحذير: هل أنت متأكد من حذف هذا الكورس وجميع محتوياته نهائياً؟')" class="text-xs font-bold text-red-600 hover:text-red-800 transition flex items-center gap-1">
+                        <a href="/admin/courses.php?action=delete&courseId=<?= urlencode($c['id']) ?>" onclick="return confirm('تحذير: هل أنت متأكد من حذف هذا الكورس وجميع محتوياته نهائياً؟')" class="text-xs font-bold text-red-600 hover:text-red-800 transition flex items-center gap-1">
                             <i class="fa-solid fa-trash-can"></i>
                             <span>حذف</span>
                         </a>
@@ -270,7 +277,7 @@ foreach ($rawCollections as $col) {
 
         <h3 class="text-lg font-black text-[#0d3753]" id="courseModalTitle">إضافة كورس جديد</h3>
 
-        <form method="POST" action="courses.php" enctype="multipart/form-data" class="space-y-4">
+        <form method="POST" action="/admin/courses.php" enctype="multipart/form-data" class="space-y-4">
             <input type="hidden" name="add_course" id="isAddCourseFlag" value="1"/>
             <input type="hidden" name="course_id" id="editCourseId" value=""/>
             
@@ -416,7 +423,7 @@ foreach ($rawCollections as $col) {
         </div>
 
         <!-- Add New Lesson Form -->
-        <form method="POST" action="courses.php" class="p-4 bg-amber-50/70 border border-amber-200 rounded-2xl space-y-3">
+        <form method="POST" action="/admin/courses.php" class="p-4 bg-amber-50/70 border border-amber-200 rounded-2xl space-y-3">
             <input type="hidden" name="add_lesson" value="1"/>
             <input type="hidden" name="lesson_course_id" id="managerCourseId" value=""/>
 
@@ -463,6 +470,7 @@ foreach ($rawCollections as $col) {
 
 <script>
 const collectionsByCourse = <?= json_encode($collectionsByCourse, JSON_UNESCAPED_UNICODE) ?>;
+const videosByCollection = <?= json_encode($videosByCollection, JSON_UNESCAPED_UNICODE) ?>;
 
 function closeModal(id) {
     document.getElementById(id).classList.add('hidden');
@@ -539,40 +547,66 @@ function openLessonsManager(courseId, courseTitle) {
         `;
     } else {
         list.forEach((col, idx) => {
+            const colVideos = videosByCollection[col.id] || [];
             const card = document.createElement('div');
-            card.className = 'p-3.5 bg-slate-50 border border-slate-200 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3';
+            card.className = 'p-4 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col gap-3 shadow-xs';
+            
+            let videosHtml = '';
+            if (colVideos.length > 0) {
+                videosHtml = `
+                    <div class="pt-2 border-t border-slate-200 flex flex-col gap-1.5 w-full">
+                        <span class="text-[11px] font-bold text-slate-500">فيديوهات هذه الحصة:</span>
+                        ${colVideos.map(v => `
+                            <div class="flex items-center justify-between gap-2 bg-white px-3 py-2 rounded-xl border border-slate-200 text-xs shadow-xs">
+                                <span class="font-bold text-[#0d3753] truncate flex items-center gap-1.5">
+                                    <i class="fa-solid fa-play-circle text-teal-600"></i>
+                                    ${v.title}
+                                </span>
+                                <a href="/admin/content.php?edit=${encodeURIComponent(v.id)}" class="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 rounded-lg font-bold text-[11px] transition shrink-0 flex items-center gap-1 shadow-xs" title="تعديل رابط وبيانات هذا الفيديو">
+                                    <i class="fa-solid fa-pen-to-square"></i>
+                                    <span>تعديل رابط الفيديو</span>
+                                </a>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+
             card.innerHTML = `
-                <div class="flex items-center gap-3">
-                    <span class="w-6 h-6 rounded-full bg-amber-100 text-amber-800 font-bold text-xs flex items-center justify-center shrink-0">
-                        ${col.order || (idx + 1)}
-                    </span>
-                    <div>
-                        <h5 class="text-xs font-bold text-slate-900">${col.title}</h5>
-                        <span class="text-[11px] font-mono font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 inline-block mt-0.5">
-                            سعر الحصة: ${col.price ? Number(col.price).toFixed(2) : '70.00'} ج.م
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div class="flex items-center gap-3">
+                        <span class="w-6 h-6 rounded-full bg-amber-100 text-amber-800 font-bold text-xs flex items-center justify-center shrink-0">
+                            ${col.order || (idx + 1)}
                         </span>
+                        <div>
+                            <h5 class="text-xs font-bold text-slate-900">${col.title}</h5>
+                            <span class="text-[11px] font-mono font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 inline-block mt-0.5">
+                                سعر الحصة: ${col.price ? Number(col.price).toFixed(2) : '70.00'} ج.م
+                            </span>
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-1.5 self-end sm:self-center">
+                        <a href="/admin/content.php?cType=QUIZ&courseId=${courseId}&collectionId=${col.id}" class="px-2.5 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 rounded-lg text-xs font-black transition flex items-center gap-1 shadow-sm" title="إضافة امتحان وتدريب لهذه الحصة">
+                            <i class="fa-solid fa-award text-amber-600"></i>
+                            <span>+ امتحان</span>
+                        </a>
+                        <a href="/admin/content.php?cType=VIDEO&courseId=${courseId}&collectionId=${col.id}" class="px-2.5 py-1 bg-teal-100 hover:bg-teal-200 text-teal-900 border border-teal-300 rounded-lg text-xs font-black transition flex items-center gap-1 shadow-sm" title="إضافة فيديو شرح أو حل لهذه الحصة">
+                            <i class="fa-solid fa-film text-teal-600"></i>
+                            <span>+ فيديو</span>
+                        </a>
+                        <a href="/admin/content.php?cType=FILE&courseId=${courseId}&collectionId=${col.id}" class="px-2.5 py-1 bg-red-100 hover:bg-red-200 text-red-900 border border-red-300 rounded-lg text-xs font-black transition flex items-center gap-1 shadow-sm" title="إضافة ملخص PDF لهذه الحصة">
+                            <i class="fa-solid fa-file-pdf text-red-600"></i>
+                            <span>+ ملخص PDF</span>
+                        </a>
+                        <button type="button" onclick="editLessonInline('${col.id}', '${col.title.replace(/'/g, "\\'")}', '${col.price || 70}', '${col.order || (idx + 1)}')" class="px-2.5 py-1 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg text-xs font-bold transition cursor-pointer">
+                            تعديل
+                        </button>
+                        <a href="/admin/courses.php?action=delete_lesson&lessonId=${col.id}" onclick="return confirm('هل تريد حذف هذه الحصة؟')" class="px-2 py-1 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-xs font-bold transition">
+                            حذف
+                        </a>
                     </div>
                 </div>
-                <div class="flex flex-wrap items-center gap-1.5 self-end sm:self-center">
-                    <a href="/admin/content.php?cType=QUIZ&courseId=${courseId}&collectionId=${col.id}" class="px-2.5 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 rounded-lg text-xs font-black transition flex items-center gap-1 shadow-sm" title="إضافة امتحان وتدريب لهذه الحصة">
-                        <i class="fa-solid fa-award text-amber-600"></i>
-                        <span>+ امتحان</span>
-                    </a>
-                    <a href="/admin/content.php?cType=VIDEO&courseId=${courseId}&collectionId=${col.id}" class="px-2.5 py-1 bg-teal-100 hover:bg-teal-200 text-teal-900 border border-teal-300 rounded-lg text-xs font-black transition flex items-center gap-1 shadow-sm" title="إضافة فيديو شرح أو حل لهذه الحصة">
-                        <i class="fa-solid fa-film text-teal-600"></i>
-                        <span>+ فيديو</span>
-                    </a>
-                    <a href="/admin/content.php?cType=FILE&courseId=${courseId}&collectionId=${col.id}" class="px-2.5 py-1 bg-red-100 hover:bg-red-200 text-red-900 border border-red-300 rounded-lg text-xs font-black transition flex items-center gap-1 shadow-sm" title="إضافة ملخص PDF لهذه الحصة">
-                        <i class="fa-solid fa-file-pdf text-red-600"></i>
-                        <span>+ ملخص PDF</span>
-                    </a>
-                    <button type="button" onclick="editLessonInline('${col.id}', '${col.title.replace(/'/g, "\\'")}', '${col.price || 70}', '${col.order || (idx + 1)}')" class="px-2.5 py-1 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg text-xs font-bold transition cursor-pointer">
-                        تعديل
-                    </button>
-                    <a href="courses.php?action=delete_lesson&lessonId=${col.id}" onclick="return confirm('هل تريد حذف هذه الحصة؟')" class="px-2 py-1 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-xs font-bold transition">
-                        حذف
-                    </a>
-                </div>
+                ${videosHtml}
             `;
             container.appendChild(card);
         });
@@ -590,7 +624,7 @@ function editLessonInline(id, title, price, order) {
 
     const form = document.createElement('form');
     form.method = 'POST';
-    form.action = 'courses.php';
+    form.action = '/admin/courses.php';
     form.innerHTML = `
         <input type="hidden" name="edit_lesson" value="1">
         <input type="hidden" name="lesson_id" value="${id}">

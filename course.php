@@ -850,6 +850,14 @@ html.dark .lesson-active-item {
                                 <h2 class="text-xl md:text-2xl font-black text-[#0d3753] dark:text-white">
                                     <?= htmlspecialchars($activeVideo['title']) ?>
                                 </h2>
+                                <?php if ($isAdmin && !empty($activeVideo['id'])): ?>
+                                    <div class="mt-2">
+                                        <a href="/admin/content.php?edit=<?= urlencode($activeVideo['id']) ?>" target="_blank" class="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg text-xs font-black shadow-xs transition" title="تعديل رابط وبيانات هذا الفيديو في لوحة التحكم">
+                                            <i class="fa-solid fa-pen-to-square text-amber-600"></i>
+                                            <span>تعديل رابط هذا الفيديو (لوحة الإدارة)</span>
+                                        </a>
+                                    </div>
+                                <?php endif; ?>
                             </div>
 
                             <!-- Next / Previous Lesson Buttons -->

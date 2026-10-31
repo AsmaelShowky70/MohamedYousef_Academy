@@ -357,13 +357,13 @@ require_once __DIR__ . '/header.php';
             <?php
                 $csvParams = $_GET;
                 $csvParams['export'] = 'csv';
-                $csvUrl = 'studentsmarks.php?' . http_build_query($csvParams);
+                $csvUrl = '/admin/studentsmarks.php?' . http_build_query($csvParams);
             ?>
             <a href="<?= htmlspecialchars($csvUrl) ?>" class="flex-1 sm:flex-none justify-center inline-flex items-center gap-2 px-3.5 sm:px-4 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs rounded-xl shadow transition">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
                 <span class="whitespace-nowrap">تصدير إلى Excel (CSV)</span>
             </a>
-            <a href="users.php" class="flex-1 sm:flex-none justify-center inline-flex items-center gap-2 px-3.5 sm:px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition">
+            <a href="/admin/users.php" class="flex-1 sm:flex-none justify-center inline-flex items-center gap-2 px-3.5 sm:px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
                 <span class="whitespace-nowrap">إدارة حسابات الطلاب</span>
             </a>
@@ -430,7 +430,7 @@ require_once __DIR__ . '/header.php';
 
     <!-- Search & Advanced Filter Bar -->
     <div class="no-print bg-white p-5 rounded-2xl border border-slate-200 shadow-sm filter-box">
-        <form method="GET" action="studentsmarks.php" class="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
+        <form method="GET" action="/admin/studentsmarks.php" class="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
             
             <!-- Search Text -->
             <div class="sm:col-span-3 relative">
@@ -489,7 +489,7 @@ require_once __DIR__ . '/header.php';
                     فلترة
                 </button>
                 <?php if ($q !== '' || $yearFilter !== '' || $typeFilter !== '' || $levelFilter !== '' || $quizFilter !== ''): ?>
-                    <a href="studentsmarks.php" title="إلغاء الفلترة" class="p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl transition">
+                    <a href="/admin/studentsmarks.php" title="إلغاء الفلترة" class="p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl transition">
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                     </a>
                 <?php endif; ?>

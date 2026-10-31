@@ -68,7 +68,8 @@ if (isset($_GET['action']) && isset($_GET['userId'])) {
         $msgType = 'success';
     } elseif ($_GET['action'] === 'reset_devices') {
         $db->prepare("DELETE FROM Device WHERE userId = ?")->execute([$targetId]);
-        $msg = 'تم فك ربط أجهزة الطالب بنجاح! يمكنه الآن الدخول من جهاز جديد.';
+        $db->prepare("UPDATE CourseCode SET boundDeviceIdentifier = NULL WHERE userId = ?")->execute([$targetId]);
+        $msg = 'تم فك ربط أجهزة الطالب بنجاح! سيتم ربط أول جهاز جديد يسجل منه تلقائياً.';
         $msgType = 'success';
     }
 }
@@ -128,7 +129,7 @@ $years = $db->query("SELECT id, name FROM Year ORDER BY `order` ASC")->fetchAll(
         <p class="text-xs text-slate-500 font-medium mt-1">عرض وتفعيل وفلترة حسابات طلاب السنتر والأونلاين</p>
     </div>
     <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-        <a href="studentsmarks.php" class="flex-1 sm:flex-none justify-center inline-flex items-center gap-2 px-3.5 sm:px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl shadow transition">
+        <a href="/admin/studentsmarks.php" class="flex-1 sm:flex-none justify-center inline-flex items-center gap-2 px-3.5 sm:px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl shadow transition">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
             <span class="whitespace-nowrap">كشف التقييم والدرجات</span>
         </a>
@@ -147,15 +148,15 @@ $years = $db->query("SELECT id, name FROM Year ORDER BY `order` ASC")->fetchAll(
 
 <!-- Quick Tabs for Center vs Online -->
 <div class="flex items-center gap-2 border-b border-slate-200 pb-2 overflow-x-auto no-scrollbar">
-    <a href="users.php<?= $yearFilter ? '?yearId='.urlencode($yearFilter) : '' ?>" class="whitespace-nowrap shrink-0 px-4 py-2 rounded-xl text-xs font-black transition flex items-center gap-2 <?= $typeFilter === '' ? 'bg-[#0f766e] text-white shadow-sm' : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200' ?>">
+    <a href="/admin/users.php<?= $yearFilter ? '?yearId='.urlencode($yearFilter) : '' ?>" class="whitespace-nowrap shrink-0 px-4 py-2 rounded-xl text-xs font-black transition flex items-center gap-2 <?= $typeFilter === '' ? 'bg-[#0f766e] text-white shadow-sm' : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200' ?>">
         <span>جميع الطلاب</span>
         <span class="px-2 py-0.5 rounded-full text-[10px] <?= $typeFilter === '' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-700' ?>"><?= $totalStudents ?></span>
     </a>
-    <a href="users.php?studentType=CENTER<?= $yearFilter ? '&yearId='.urlencode($yearFilter) : '' ?>" class="whitespace-nowrap shrink-0 px-4 py-2 rounded-xl text-xs font-black transition flex items-center gap-2 <?= $typeFilter === 'CENTER' ? 'bg-amber-600 text-white shadow-sm' : 'bg-white text-amber-800 hover:bg-amber-50 border border-amber-200' ?>">
+    <a href="/admin/users.php?studentType=CENTER<?= $yearFilter ? '&yearId='.urlencode($yearFilter) : '' ?>" class="whitespace-nowrap shrink-0 px-4 py-2 rounded-xl text-xs font-black transition flex items-center gap-2 <?= $typeFilter === 'CENTER' ? 'bg-amber-600 text-white shadow-sm' : 'bg-white text-amber-800 hover:bg-amber-50 border border-amber-200' ?>">
         <span>🏢 طلاب السنتر</span>
         <span class="px-2 py-0.5 rounded-full text-[10px] <?= $typeFilter === 'CENTER' ? 'bg-white/20 text-white' : 'bg-amber-100 text-amber-900' ?>"><?= $totalCenter ?></span>
     </a>
-    <a href="users.php?studentType=ONLINE<?= $yearFilter ? '&yearId='.urlencode($yearFilter) : '' ?>" class="whitespace-nowrap shrink-0 px-4 py-2 rounded-xl text-xs font-black transition flex items-center gap-2 <?= $typeFilter === 'ONLINE' ? 'bg-sky-600 text-white shadow-sm' : 'bg-white text-sky-800 hover:bg-sky-50 border border-sky-200' ?>">
+    <a href="/admin/users.php?studentType=ONLINE<?= $yearFilter ? '&yearId='.urlencode($yearFilter) : '' ?>" class="whitespace-nowrap shrink-0 px-4 py-2 rounded-xl text-xs font-black transition flex items-center gap-2 <?= $typeFilter === 'ONLINE' ? 'bg-sky-600 text-white shadow-sm' : 'bg-white text-sky-800 hover:bg-sky-50 border border-sky-200' ?>">
         <span>🌐 طلاب أونلاين</span>
         <span class="px-2 py-0.5 rounded-full text-[10px] <?= $typeFilter === 'ONLINE' ? 'bg-white/20 text-white' : 'bg-sky-100 text-sky-900' ?>"><?= $totalOnline ?></span>
     </a>
@@ -163,7 +164,7 @@ $years = $db->query("SELECT id, name FROM Year ORDER BY `order` ASC")->fetchAll(
 
 <!-- Search and Filter Bar -->
 <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-    <form method="GET" action="users.php" class="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
+    <form method="GET" action="/admin/users.php" class="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
         <?php if ($typeFilter): ?>
             <input type="hidden" name="studentType" value="<?= htmlspecialchars($typeFilter) ?>">
         <?php endif; ?>
@@ -212,7 +213,7 @@ $years = $db->query("SELECT id, name FROM Year ORDER BY `order` ASC")->fetchAll(
                 فلترة
             </button>
             <?php if ($q !== '' || $statusFilter !== '' || $yearFilter !== '' || $typeFilter !== ''): ?>
-                <a href="users.php" title="إلغاء الفلترة" class="p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl transition">
+                <a href="/admin/users.php" title="إلغاء الفلترة" class="p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl transition">
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                 </a>
             <?php endif; ?>
@@ -300,18 +301,18 @@ $years = $db->query("SELECT id, name FROM Year ORDER BY `order` ASC")->fetchAll(
                                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
                                 </a>
                                 <?php if ($isBanned): ?>
-                                    <a href="users.php?action=activate&userId=<?= urlencode($u['id']) ?>" title="فك الحظر وتفعيل" class="p-1.5 rounded-lg bg-green-50 text-green-700 hover:bg-green-100 transition">
+                                    <a href="/admin/users.php?action=activate&userId=<?= urlencode($u['id']) ?>" title="فك الحظر وتفعيل" class="p-1.5 rounded-lg bg-green-50 text-green-700 hover:bg-green-100 transition">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
                                     </a>
                                 <?php else: ?>
-                                    <a href="users.php?action=ban&userId=<?= urlencode($u['id']) ?>" title="حظر الطالب" onclick="return confirm('هل تريد حظر هذا الطالب من المنصة؟')" class="p-1.5 rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 transition">
+                                    <a href="/admin/users.php?action=ban&userId=<?= urlencode($u['id']) ?>" title="حظر الطالب" onclick="return confirm('هل تريد حظر هذا الطالب من المنصة؟')" class="p-1.5 rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 transition">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
                                     </a>
                                 <?php endif; ?>
-                                <a href="users.php?action=reset_devices&userId=<?= urlencode($u['id']) ?>" title="فك ربط أجهزة الطالب" onclick="return confirm('هل تريد فك ربط أجهزة هذا الطالب للسماح له بالدخول من جهاز جديد؟')" class="p-1.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 transition">
+                                <a href="/admin/users.php?action=reset_devices&userId=<?= urlencode($u['id']) ?>" title="فك ربط أجهزة الطالب" onclick="return confirm('هل تريد فك ربط أجهزة هذا الطالب للسماح له بالدخول من جهاز جديد؟')" class="p-1.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 transition">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
                                 </a>
-                                <a href="users.php?action=delete&userId=<?= urlencode($u['id']) ?>" title="حذف الطالب" onclick="return confirm('تحذير: هل أنت متأكد من حذف هذا الطالب نهائياً؟')" class="p-1.5 rounded-lg bg-red-50 text-red-700 hover:bg-red-100 transition">
+                                <a href="/admin/users.php?action=delete&userId=<?= urlencode($u['id']) ?>" title="حذف الطالب" onclick="return confirm('تحذير: هل أنت متأكد من حذف هذا الطالب نهائياً؟')" class="p-1.5 rounded-lg bg-red-50 text-red-700 hover:bg-red-100 transition">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
                                 </a>
                             </div>
@@ -337,7 +338,7 @@ $years = $db->query("SELECT id, name FROM Year ORDER BY `order` ASC")->fetchAll(
 
         <h3 class="text-lg font-black text-[#0d3753] dark:text-white">إضافة طالب جديد يدوياً</h3>
 
-        <form method="POST" action="users.php" class="space-y-4">
+        <form method="POST" action="/admin/users.php" class="space-y-4">
             <input type="hidden" name="add_student" value="1"/>
 
             <div>

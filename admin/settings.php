@@ -24,7 +24,7 @@ $settings = getSettings();
             </div>
             <div>
                 <h3 class="text-sm font-black text-[#0d3753]">نظام الاشتراك بالأكواد فقط (Active)</h3>
-                <p class="text-xs text-slate-600 mt-0.5">تم إلغاء فودافون كاش والمحفظة بنجاح. تفعيل الكورسات والحصص للطلاب يتم حصرياً عبر أكواد التفعيل من صفحة <a href="codes.php" class="text-teal-700 underline font-bold">إدارة الأكواد</a> أو عبر الإضافة المباشرة من ملف الطالب.</p>
+                <p class="text-xs text-slate-600 mt-0.5">تم إلغاء فودافون كاش والمحفظة بنجاح. تفعيل الكورسات والحصص للطلاب يتم حصرياً عبر أكواد التفعيل من صفحة <a href="/admin/codes.php" class="text-teal-700 underline font-bold">إدارة الأكواد</a> أو عبر الإضافة المباشرة من ملف الطالب.</p>
             </div>
         </div>
 

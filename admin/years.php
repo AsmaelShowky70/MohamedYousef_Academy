@@ -198,7 +198,7 @@ require_once __DIR__ . '/header.php';
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
                         <span>تعديل</span>
                     </button>
-                    <a href="years.php?action=delete&yearId=<?= urlencode($yr['id']) ?>" onclick="return confirm('هل أنت متأكد من حذف هذه السنة؟ سيتم إلغاء ربط الأقسام بها.')" class="p-2.5 bg-red-50 hover:bg-red-500 hover:text-white text-red-500 rounded-xl transition">
+                    <a href="/admin/years.php?action=delete&yearId=<?= urlencode($yr['id']) ?>" onclick="return confirm('هل أنت متأكد من حذف هذه السنة؟ سيتم إلغاء ربط الأقسام بها.')" class="p-2.5 bg-red-50 hover:bg-red-500 hover:text-white text-red-500 rounded-xl transition">
                         <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                     </a>
                 </div>
@@ -218,7 +218,7 @@ require_once __DIR__ . '/header.php';
 
         <h3 class="text-lg font-black text-[#0d3753]">إضافة سنة دراسية جديدة</h3>
 
-        <form method="POST" action="years.php" enctype="multipart/form-data" class="space-y-4">
+        <form method="POST" action="/admin/years.php" enctype="multipart/form-data" class="space-y-4">
             <input type="hidden" name="add_year" value="1"/>
 
             <div>
@@ -289,7 +289,7 @@ require_once __DIR__ . '/header.php';
 
         <h3 class="text-lg font-black text-[#0d3753]" id="editModalTitle">تعديل المرحلة الدراسية</h3>
 
-        <form method="POST" action="years.php" enctype="multipart/form-data" class="space-y-4">
+        <form method="POST" action="/admin/years.php" enctype="multipart/form-data" class="space-y-4">
             <input type="hidden" name="update_year" value="1"/>
             <input type="hidden" name="yearId" id="editYearId"/>
 

@@ -257,7 +257,7 @@ if ($fType === 'ALL' || $fType === 'FILE') {
 
 // 3. Quizzes
 if ($fType === 'ALL' || $fType === 'QUIZ') {
-    $qSql = "SELECT q.id, q.title, q.description, '' as link, q.published, q.createdAt, 'QUIZ' as itemType, 
+    $qSql = "SELECT q.id, q.title, q.description, '' as link, q.published, q.createdAt, 'QUIZ' as itemType, q.quizTime,
                     c.title as courseTitle, c.id as courseId, col.title as collectionTitle, col.id as collectionId
              FROM Quiz q
              JOIN Course c ON q.courseId = c.id
@@ -278,6 +278,62 @@ if ($fType === 'ALL' || $fType === 'QUIZ') {
 usort($items, function($a, $b) {
     return strtotime($b['createdAt']) <=> strtotime($a['createdAt']);
 });
+
+// Preload quiz questions for edit modal
+$quizQuestions = [];
+if (!empty($items)) {
+    $quizIds = array_values(array_filter(array_map(fn($it) => ($it['itemType'] ?? '') === 'QUIZ' ? $it['id'] : null, $items)));
+    if (!empty($quizIds)) {
+        $inPlaceholders = implode(',', array_fill(0, count($quizIds), '?'));
+        try {
+            $stmtQQ = $db->prepare("SELECT * FROM Question WHERE quizId IN ($inPlaceholders) ORDER BY `order` ASC, id ASC");
+            $stmtQQ->execute($quizIds);
+            while ($qRow = $stmtQQ->fetch()) {
+                $quizQuestions[$qRow['quizId']][] = $qRow;
+            }
+        } catch (Exception $e) {}
+    }
+}
+
+// Check for deep-linked edit request via GET query ?edit=ID or ?edit_id=ID
+$reqEditId = trim($_GET['edit'] ?? ($_GET['edit_id'] ?? ''));
+$directEditItem = null;
+if ($reqEditId) {
+    foreach ($items as $it) {
+        if ($it['id'] === $reqEditId) {
+            $directEditItem = $it;
+            break;
+        }
+    }
+    if (!$directEditItem) {
+        $stmtV = $db->prepare("SELECT v.id, v.title, v.description, v.link, v.published, v.createdAt, 'VIDEO' as itemType, 
+                                      c.title as courseTitle, c.id as courseId, col.title as collectionTitle, col.id as collectionId
+                               FROM Video v JOIN Course c ON v.courseId = c.id JOIN Collection col ON v.collectionId = col.id WHERE v.id = ?");
+        $stmtV->execute([$reqEditId]);
+        $directEditItem = $stmtV->fetch();
+        if (!$directEditItem) {
+            $stmtF = $db->prepare("SELECT f.id, f.title, f.description, f.link, f.published, f.createdAt, 'FILE' as itemType, 
+                                          c.title as courseTitle, c.id as courseId, col.title as collectionTitle, col.id as collectionId
+                                   FROM File f JOIN Course c ON f.courseId = c.id JOIN Collection col ON f.collectionId = col.id WHERE f.id = ?");
+            $stmtF->execute([$reqEditId]);
+            $directEditItem = $stmtF->fetch();
+        }
+        if (!$directEditItem) {
+            $stmtQ = $db->prepare("SELECT q.id, q.title, q.description, '' as link, q.published, q.createdAt, 'QUIZ' as itemType, q.quizTime,
+                                          c.title as courseTitle, c.id as courseId, col.title as collectionTitle, col.id as collectionId
+                                   FROM Quiz q JOIN Course c ON q.courseId = c.id JOIN Collection col ON q.collectionId = col.id WHERE q.id = ?");
+            $stmtQ->execute([$reqEditId]);
+            $directEditItem = $stmtQ->fetch();
+            if ($directEditItem) {
+                try {
+                    $stmtQQ = $db->prepare("SELECT * FROM Question WHERE quizId = ? ORDER BY `order` ASC, id ASC");
+                    $stmtQQ->execute([$reqEditId]);
+                    $quizQuestions[$reqEditId] = $stmtQQ->fetchAll();
+                } catch (Exception $e) {}
+            }
+        }
+    }
+}
 
 $adminTitle = "المحتوى - منصة أ. محمد يوسف";
 $activeAdminNav = "content";
@@ -420,14 +476,22 @@ require_once __DIR__ . '/header.php';
 
                             <!-- Actions -->
                             <td class="p-4 text-center">
-                                <div class="inline-flex items-center gap-2">
+                                <div class="inline-flex items-center gap-1.5">
+                                    <!-- Edit Content Button -->
+                                    <button type="button" 
+                                            onclick='openEditContentModal(<?= json_encode($it, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>)' 
+                                            class="p-1.5 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition" 
+                                            title="تعديل هذا المحتوى (الرابط، العنوان، أو البيانات)">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                    </button>
+
                                     <?php if ($it['link']): ?>
                                         <a href="<?= htmlspecialchars($it['link']) ?>" target="_blank" title="معاينة الرابط" class="p-1.5 text-slate-400 hover:text-[#0f766e] transition">
                                             <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                                         </a>
                                     <?php endif; ?>
 
-                                    <a href="content.php?action=delete&type=<?= strtolower($it['itemType']) ?>&id=<?= urlencode($it['id']) ?>" 
+                                    <a href="/admin/content.php?action=delete&type=<?= strtolower($it['itemType']) ?>&id=<?= urlencode($it['id']) ?>" 
                                        onclick="return confirm('هل أنت متأكد من رغبتك في حذف هذا المحتوى؟')" 
                                        title="حذف" class="p-1.5 text-red-400 hover:text-red-600 transition">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
@@ -457,7 +521,7 @@ require_once __DIR__ . '/header.php';
             <p class="text-xs text-slate-400 mt-0.5">حدد الكورس والمجموعة ونوع المحتوى (فيديو، ملف، أو امتحان تفاعلي)</p>
         </div>
 
-        <form method="POST" action="content.php" enctype="multipart/form-data" class="space-y-6">
+        <form method="POST" action="/admin/content.php" id="contentForm" enctype="multipart/form-data" class="space-y-6">
             <input type="hidden" name="save_content" value="1"/>
             <input type="hidden" name="edit_id" id="formEditId" value=""/>
 
@@ -588,7 +652,7 @@ require_once __DIR__ . '/header.php';
                 <button type="button" onclick="closeModal('contentModal')" class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition">
                     إلغاء
                 </button>
-                <button type="submit" class="btn-add-action px-6 py-2.5 bg-[#0f766e] hover:bg-[#0d3753] text-white font-black text-xs rounded-xl shadow transition">
+                <button type="submit" id="btnSubmitContent" class="btn-add-action px-6 py-2.5 bg-[#0f766e] hover:bg-[#0d3753] text-white font-black text-xs rounded-xl shadow transition">
                     حفظ المحتوى
                 </button>
             </div>
@@ -601,7 +665,13 @@ require_once __DIR__ . '/header.php';
 <!-- ======================================================== -->
 <script>
 const collectionsData = <?= json_encode($collectionsByCourse, JSON_UNESCAPED_UNICODE) ?>;
+const quizQuestionsData = <?= json_encode($quizQuestions, JSON_UNESCAPED_UNICODE) ?>;
 let qCount = 0;
+
+function escapeHtml(text) {
+    if (!text) return '';
+    return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+}
 
 function applyFilters() {
     const s = document.getElementById('searchInput').value.trim();
@@ -615,7 +685,60 @@ function applyFilters() {
     if (c !== 'ALL') params.set('filterCourse', c);
     if (st !== 'ALL') params.set('filterStatus', st);
 
-    window.location.href = 'content.php?' + params.toString();
+    window.location.href = '/admin/content.php?' + params.toString();
+}
+
+function setSectionDisabled(section, disabled) {
+    if (!section) return;
+    const inputs = section.querySelectorAll('input, select, textarea');
+    inputs.forEach(el => {
+        el.disabled = disabled;
+    });
+}
+
+function onContentTypeChange() {
+    const t = document.getElementById('modalContentType').value;
+    const vidSec = document.getElementById('videoFieldsSection');
+    const fileSec = document.getElementById('fileFieldsSection');
+    const quizSec = document.getElementById('quizFieldsSection');
+    const vidInput = document.getElementById('videoLinkInput');
+
+    if (t === 'VIDEO') {
+        vidSec.classList.remove('hidden');
+        setSectionDisabled(vidSec, false);
+        vidInput.required = true;
+
+        fileSec.classList.add('hidden');
+        setSectionDisabled(fileSec, true);
+
+        quizSec.classList.add('hidden');
+        setSectionDisabled(quizSec, true);
+    } else if (t === 'FILE') {
+        vidSec.classList.add('hidden');
+        setSectionDisabled(vidSec, true);
+        vidInput.required = false;
+
+        fileSec.classList.remove('hidden');
+        setSectionDisabled(fileSec, false);
+
+        quizSec.classList.add('hidden');
+        setSectionDisabled(quizSec, true);
+    } else if (t === 'QUIZ') {
+        vidSec.classList.add('hidden');
+        setSectionDisabled(vidSec, true);
+        vidInput.required = false;
+
+        fileSec.classList.add('hidden');
+        setSectionDisabled(fileSec, true);
+
+        quizSec.classList.remove('hidden');
+        setSectionDisabled(quizSec, false);
+
+        const container = document.getElementById('questionsContainer');
+        if (container && container.children.length === 0) {
+            addQuestionItem();
+        }
+    }
 }
 
 function openAddContentModal(cType = 'VIDEO', courseId = null, collectionId = null) {
@@ -627,8 +750,13 @@ function openAddContentModal(cType = 'VIDEO', courseId = null, collectionId = nu
     document.getElementById('fileLinkInput').value = '';
     document.getElementById('publishedCheckbox').checked = true;
     document.getElementById('modalContentType').value = cType || 'VIDEO';
-    onContentTypeChange();
-    setVideoSource('YOUTUBE');
+
+    const submitBtn = document.getElementById('btnSubmitContent');
+    if (submitBtn) submitBtn.textContent = 'حفظ المحتوى';
+
+    // Reset questions container so no invalid required inputs linger for video/file
+    document.getElementById('questionsContainer').innerHTML = '';
+    qCount = 0;
 
     if (courseId) {
         const cSel = document.getElementById('modalCourseSelect');
@@ -642,11 +770,66 @@ function openAddContentModal(cType = 'VIDEO', courseId = null, collectionId = nu
         }
     }
 
-    // Reset questions
-    document.getElementById('questionsContainer').innerHTML = '';
-    qCount = 0;
-    addQuestionItem();
+    setVideoSource('YOUTUBE');
+    onContentTypeChange();
 
+    document.getElementById('contentModal').classList.remove('hidden');
+}
+
+function openEditContentModal(item) {
+    if (!item) return;
+
+    document.getElementById('formEditId').value = item.id || '';
+    document.getElementById('modalTitle').textContent = 'تعديل المحتوى: ' + (item.title || '');
+    const submitBtn = document.getElementById('btnSubmitContent');
+    if (submitBtn) submitBtn.textContent = 'حفظ التعديلات';
+
+    document.getElementById('contentTitle').value = item.title || '';
+    document.getElementById('contentDescription').value = item.description || '';
+    document.getElementById('publishedCheckbox').checked = (item.published == 1 || item.published === '1');
+
+    const courseSelect = document.getElementById('modalCourseSelect');
+    if (courseSelect) {
+        courseSelect.value = item.courseId || '';
+        onCourseChange();
+        const colSelect = document.getElementById('modalCollectionSelect');
+        if (colSelect && item.collectionId) {
+            colSelect.value = item.collectionId;
+        }
+    }
+
+    const itemType = (item.itemType || 'VIDEO').toUpperCase();
+    document.getElementById('modalContentType').value = itemType;
+
+    if (itemType === 'VIDEO') {
+        const link = item.link || '';
+        document.getElementById('videoLinkInput').value = link;
+        if (link.includes('dailymotion') || link.includes('dai.ly')) {
+            setVideoSource('DAILYMOTION');
+        } else {
+            setVideoSource('YOUTUBE');
+        }
+    } else if (itemType === 'FILE') {
+        document.getElementById('fileLinkInput').value = item.link || '';
+    } else if (itemType === 'QUIZ') {
+        const qTimeInput = document.querySelector('input[name="quiz_time"]');
+        if (qTimeInput) qTimeInput.value = item.quizTime || 30;
+
+        const container = document.getElementById('questionsContainer');
+        container.innerHTML = '';
+        qCount = 0;
+
+        const existingQuestions = quizQuestionsData[item.id] || [];
+        if (existingQuestions.length > 0) {
+            existingQuestions.forEach(q => {
+                loadExistingQuestionItem(q);
+            });
+        } else {
+            addQuestionItem();
+        }
+    }
+
+    onContentTypeChange();
     document.getElementById('contentModal').classList.remove('hidden');
 }
 
@@ -677,13 +860,6 @@ function onCourseChange() {
         colSelect.appendChild(opt);
     });
     colSelect.innerHTML += '<option value="__AUTO__">✨ إنشاء حصة / باب جديد تلقائياً</option>';
-}
-
-function onContentTypeChange() {
-    const t = document.getElementById('modalContentType').value;
-    document.getElementById('videoFieldsSection').classList.toggle('hidden', t !== 'VIDEO');
-    document.getElementById('fileFieldsSection').classList.toggle('hidden', t !== 'FILE');
-    document.getElementById('quizFieldsSection').classList.toggle('hidden', t !== 'QUIZ');
 }
 
 function setVideoSource(src) {
@@ -795,6 +971,40 @@ function addOptionToQuestion(qIdx) {
     syncCorrectRadio(qIdx);
 }
 
+function addExistingOptionToQuestion(qIdx, optText, isCorrect) {
+    const list = document.getElementById(`opts_list_${qIdx}`);
+    if (!list) return;
+
+    const optIndex = list.children.length;
+    const letter = arabicLetters[optIndex] || (optIndex + 1);
+
+    const row = document.createElement('div');
+    row.className = 'opt-row flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-white p-2.5 rounded-xl border border-slate-200 shadow-xs transition';
+    row.id = `q_${qIdx}_opt_row_${optIndex}`;
+
+    row.innerHTML = `
+        <div class="flex items-center gap-2 flex-1">
+            <span class="text-xs font-black text-slate-600 w-6 text-center opt-letter bg-slate-100 rounded py-1 shrink-0">${letter}</span>
+            <input type="text" name="questions[${qIdx}][options][${optIndex}]" id="q_${qIdx}_opt_${optIndex}" value="${escapeHtml(optText)}" oninput="syncCorrectRadio(${qIdx})" placeholder="نص الخيار (${letter})" class="flex-1 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold outline-none focus:border-[#0f766e] focus:bg-white" required/>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+            <label class="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-emerald-50 hover:border-emerald-500 cursor-pointer text-xs font-bold text-slate-700 transition">
+                <input type="radio" name="questions[${qIdx}][correct_index]" value="${optIndex}" ${isCorrect ? 'checked' : ''} onchange="syncCorrectRadio(${qIdx})" class="accent-emerald-600 w-4 h-4"/>
+                <span>الإجابة الصحيحة</span>
+            </label>
+            <button type="button" onclick="removeOptionFromQuestion(${qIdx}, this)" class="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition btn-del-opt" title="حذف هذا الخيار">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
+            </button>
+        </div>
+    `;
+
+    list.appendChild(row);
+    reindexQuestionOptions(qIdx);
+    if (isCorrect) {
+        syncCorrectRadio(qIdx);
+    }
+}
+
 function removeOptionFromQuestion(qIdx, btn) {
     const list = document.getElementById(`opts_list_${qIdx}`);
     if (!list) return;
@@ -889,6 +1099,102 @@ function addQuestionItem() {
     addOptionToQuestion(idx);
 }
 
+function loadExistingQuestionItem(q) {
+    const idx = qCount++;
+    const container = document.getElementById('questionsContainer');
+    const qDiv = document.createElement('div');
+    qDiv.className = 'border border-slate-200 rounded-2xl p-4 sm:p-5 bg-slate-50/70 space-y-3.5 relative shadow-sm';
+    qDiv.id = `q_card_${idx}`;
+    qDiv.setAttribute('data-q-idx', idx);
+
+    let opts = [];
+    try {
+        opts = (typeof q.options === 'string') ? JSON.parse(q.options || '[]') : (q.options || []);
+    } catch(e) {
+        opts = [];
+    }
+    const isWritten = opts.length === 0 && q.rightAnswer;
+    const points = q.points || 1;
+    const head = q.questionHead || '';
+    const img = q.image || '';
+    const right = q.rightAnswer || '';
+
+    qDiv.innerHTML = `
+        <div class="flex items-center justify-between border-b border-slate-200 pb-2.5">
+            <div class="flex items-center gap-2">
+                <span class="font-black text-xs text-[#0d3753] bg-teal-50 text-teal-800 border border-teal-200 px-3 py-1 rounded-lg">السؤال #${idx + 1}</span>
+                <div class="flex items-center gap-1.5 bg-white border border-slate-200 px-2.5 py-1 rounded-lg shadow-xs">
+                    <label class="text-[11px] font-bold text-slate-600">درجة السؤال:</label>
+                    <input type="number" name="questions[${idx}][points]" value="${escapeHtml(points)}" min="1" max="100" class="w-14 text-center text-xs font-black text-[#0f766e] bg-slate-50 border border-slate-200 rounded outline-none focus:border-[#0f766e] py-0.5" title="حدد درجة هذا السؤال في الامتحان"/>
+                </div>
+            </div>
+            <button type="button" onclick="document.getElementById('q_card_${idx}').remove()" class="text-red-500 hover:text-red-700 p-1.5 rounded-lg hover:bg-red-50 transition" title="حذف السؤال بالكامل">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
+            </button>
+        </div>
+
+        <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">نص السؤال *</label>
+            <input type="text" name="questions[${idx}][head]" value="${escapeHtml(head)}" required placeholder="مثال: ما هو إعراب كلمة زيد في الجملة..." class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:border-[#0f766e]"/>
+        </div>
+
+        <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">رابط صورة توضيحية للسؤال (اختياري)</label>
+            <input type="text" name="questions[${idx}][image]" value="${escapeHtml(img)}" placeholder="https://... أو رابط صورة" class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:border-[#0f766e]"/>
+        </div>
+
+        <div class="flex items-center gap-4 py-1 text-xs font-bold text-slate-700">
+            <span>نوع السؤال:</span>
+            <label class="inline-flex items-center gap-1.5 cursor-pointer bg-white px-3 py-1.5 rounded-lg border border-slate-200">
+                <input type="radio" name="questions[${idx}][type]" value="MCQ" ${!isWritten ? 'checked' : ''} onchange="toggleQuestionType(${idx}, 'MCQ')" class="accent-[#0f766e]"/>
+                اختياري متعدد (MCQ)
+            </label>
+            <label class="inline-flex items-center gap-1.5 cursor-pointer bg-white px-3 py-1.5 rounded-lg border border-slate-200">
+                <input type="radio" name="questions[${idx}][type]" value="WRITTEN" ${isWritten ? 'checked' : ''} onchange="toggleQuestionType(${idx}, 'WRITTEN')" class="accent-[#0f766e]"/>
+                سؤال مقالي (Written)
+            </label>
+        </div>
+
+        <!-- Options Container for MCQ -->
+        <div id="q_options_${idx}" class="space-y-2.5 pt-1 ${isWritten ? 'hidden' : ''}">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200/60 pb-2">
+                <div>
+                    <label class="block text-xs font-bold text-slate-800">خيارات الإجابة (حدد الإجابة الصحيحة بالزر المجاور للخيار)</label>
+                    <span class="text-[11px] text-slate-500 font-medium">الافتراضي خيارين (مثل: صح / خطأ). اضغط زر الزائد لزيادة الخيارات</span>
+                </div>
+                <button type="button" onclick="addOptionToQuestion(${idx})" class="self-start sm:self-auto px-3 py-1.5 bg-teal-50 hover:bg-teal-100 text-[#0f766e] border border-teal-300 font-bold text-xs rounded-xl transition flex items-center gap-1.5 shadow-xs">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    <span>إضافة خيار إضافي</span>
+                </button>
+            </div>
+            
+            <div id="opts_list_${idx}" class="space-y-2 pt-1">
+            </div>
+
+            <!-- Hidden right input fallback -->
+            <input type="hidden" name="questions[${idx}][right]" id="q_${idx}_right" value="${escapeHtml(right)}"/>
+        </div>
+
+        <!-- Written Answer Container -->
+        <div id="q_written_${idx}" class="${isWritten ? '' : 'hidden'} pt-1">
+            <label class="block text-xs font-bold text-slate-700 mb-1">الإجابة النموذجية المكتوبة *</label>
+            <input type="text" name="questions[${idx}][right_written]" value="${escapeHtml(right)}" placeholder="اكتب الإجابة النموذجية هنا..." class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:border-[#0f766e]"/>
+        </div>
+    `;
+
+    container.appendChild(qDiv);
+
+    if (opts.length > 0) {
+        opts.forEach((optText) => {
+            const isCorrect = (String(optText).trim() === String(right).trim());
+            addExistingOptionToQuestion(idx, optText, isCorrect);
+        });
+    } else {
+        addOptionToQuestion(idx);
+        addOptionToQuestion(idx);
+    }
+}
+
 function toggleQuestionType(idx, type) {
     const optDiv = document.getElementById(`q_options_${idx}`);
     const wrDiv = document.getElementById(`q_written_${idx}`);
@@ -901,17 +1207,23 @@ function toggleQuestionType(idx, type) {
     }
 }
 
-// Auto-open add modal if invoked with quick query parameters from courses.php
+// Auto-open add / edit modal based on deep link or quick query parameters
 document.addEventListener('DOMContentLoaded', function() {
-    const params = new URLSearchParams(window.location.search);
-    const reqType = params.get('cType');
-    const reqCourse = params.get('courseId');
-    const reqCol = params.get('collectionId');
-    if (reqType || reqCourse || reqCol) {
+    <?php if ($directEditItem): ?>
         setTimeout(function() {
-            openAddContentModal(reqType || 'VIDEO', reqCourse, reqCol);
-        }, 150);
-    }
+            openEditContentModal(<?= json_encode($directEditItem, JSON_UNESCAPED_UNICODE) ?>);
+        }, 100);
+    <?php else: ?>
+        const params = new URLSearchParams(window.location.search);
+        const reqType = params.get('cType');
+        const reqCourse = params.get('courseId');
+        const reqCol = params.get('collectionId');
+        if (reqType || reqCourse || reqCol) {
+            setTimeout(function() {
+                openAddContentModal(reqType || 'VIDEO', reqCourse, reqCol);
+            }, 150);
+        }
+    <?php endif; ?>
 });
 </script>
 

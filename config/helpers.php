@@ -128,7 +128,7 @@ function getCurrentUser() {
     }
 
     // Strict single-device check for students
-    if ($user['role'] === 'STUDENT') {
+    if (strtoupper($user['role'] ?? '') === 'STUDENT') {
         $devId = getDeviceIdentifier();
         // Check if student has any devices bound
         $stmtDevs = $db->prepare("SELECT id, identifier FROM Device WHERE userId = ?");
@@ -140,6 +140,10 @@ function getCurrentUser() {
             foreach ($devs as $d) {
                 if ($d['identifier'] === $devId) {
                     $isAuthorized = true;
+                    // Update activity time
+                    try {
+                        $db->prepare("UPDATE Device SET lastActiveAt = NOW() WHERE id = ?")->execute([$d['id']]);
+                    } catch (Exception $e) {}
                     break;
                 }
             }
@@ -149,6 +153,29 @@ function getCurrentUser() {
                 clearRememberToken();
                 return null;
             }
+        } else {
+            // Student has NO bound devices (e.g. after Admin reset / unbind).
+            // AUTOMATICALLY BIND THIS FIRST ACTIVE DEVICE AS THE SINGLE AUTHORIZED DEVICE!
+            $newDevId = generateId(5);
+            $ua = $_SERVER['HTTP_USER_AGENT'] ?? '';
+            $os = 'Unknown OS';
+            if (strpos($ua, 'Windows') !== false) $os = 'Windows';
+            elseif (strpos($ua, 'Android') !== false) $os = 'Android';
+            elseif (strpos($ua, 'iPhone') !== false || strpos($ua, 'iPad') !== false) $os = 'iOS';
+            elseif (strpos($ua, 'Mac') !== false) $os = 'macOS';
+
+            $browser = 'Unknown Browser';
+            if (strpos($ua, 'Chrome') !== false) $browser = 'Chrome';
+            elseif (strpos($ua, 'Safari') !== false) $browser = 'Safari';
+            elseif (strpos($ua, 'Firefox') !== false) $browser = 'Firefox';
+            elseif (strpos($ua, 'Edge') !== false) $browser = 'Edge';
+
+            $devType = (strpos($ua, 'Mobile') !== false || strpos($ua, 'Android') !== false || strpos($ua, 'iPhone') !== false) ? 'phone' : 'pc';
+
+            try {
+                $insDev = $db->prepare("INSERT INTO Device (id, userId, identifier, deviceType, browser, os, createdAt, lastActiveAt) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW()) ON DUPLICATE KEY UPDATE userId = VALUES(userId), lastActiveAt = NOW()");
+                $insDev->execute([$newDevId, $user['id'], $devId, $devType, $browser, $os]);
+            } catch (Exception $e) {}
         }
     }
 
@@ -357,10 +384,12 @@ function getDeviceIdentifier() {
     } else {
         $devUuid = bin2hex(random_bytes(16));
         if (!headers_sent()) {
+            $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443);
             setcookie($cookieName, $devUuid, [
                 'expires' => time() + 31536000,
                 'path' => '/',
                 'httponly' => true,
+                'secure' => $isHttps,
                 'samesite' => 'Lax'
             ]);
         }

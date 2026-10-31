@@ -102,7 +102,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'reset_all_devices') {
         $db->prepare("DELETE FROM Device WHERE userId = ?")->execute([$studentId]);
-        $_SESSION['student_msg'] = 'تم فك ربط جميع أجهزة الطالب بنجاح! يمكنه الآن تسجيل الدخول من جهاز جديد.';
+        $db->prepare("UPDATE CourseCode SET boundDeviceIdentifier = NULL WHERE userId = ?")->execute([$studentId]);
+        $_SESSION['student_msg'] = 'تم فك ربط جميع أجهزة الطالب وكروت الاشتراك بنجاح! سيتم ربط أول جهاز جديد يسجل منه تلقائياً.';
         $_SESSION['student_msg_type'] = 'success';
         header("Location: /admin/student_profile.php?id=" . urlencode($studentId));
         exit;
@@ -362,7 +363,7 @@ $years = $db->query("SELECT id, name FROM Year ORDER BY `order` ASC")->fetchAll(
 <!-- Top Breadcrumbs & Actions -->
 <div class="no-print flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
     <div class="flex items-center gap-3">
-        <a href="users.php" class="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition flex items-center justify-center" title="رجوع لقائمة الطلاب">
+        <a href="/admin/users.php" class="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition flex items-center justify-center" title="رجوع لقائمة الطلاب">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
         </a>
         <div>
