@@ -53,16 +53,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_content'])) {
         $_SESSION['content_msg'] = 'عنوان المحتوى / الامتحان مطلوب';
         $_SESSION['content_msg_type'] = 'error';
     } else {
-        // Auto-assign or auto-create collection if none selected (#17)
-        if (empty($collectionId) || $collectionId === '__AUTO__') {
+        // Handle Collection: Existing or Auto-create New Lesson (#17)
+        $isNewCollection = ($collectionId === '__AUTO__' || $collectionId === '__NEW__');
+
+        // If collectionId is empty, check if any collection exists in the course
+        if (empty($collectionId)) {
             $chkCol = $db->prepare("SELECT id FROM Collection WHERE courseId = ? ORDER BY `order` ASC LIMIT 1");
             $chkCol->execute([$courseId]);
-            $collectionId = $chkCol->fetchColumn();
-            if (!$collectionId) {
-                $collectionId = generateId(5);
-                $db->prepare("INSERT INTO Collection (id, title, price, courseId, `order`, updatedAt) VALUES (?, 'دروس ومحاضرات الكورس', 70, ?, 1, NOW())")
-                   ->execute([$collectionId, $courseId]);
+            $firstCol = $chkCol->fetchColumn();
+            if ($firstCol) {
+                $collectionId = $firstCol;
+            } else {
+                $isNewCollection = true;
             }
+        }
+
+        $createdLessonTitle = null;
+        if ($isNewCollection) {
+            $newColTitle = trim($_POST['new_collection_title'] ?? '');
+
+            // Get next order for this course
+            $stmtOrder = $db->prepare("SELECT COALESCE(MAX(`order`), 0) + 1 FROM Collection WHERE courseId = ?");
+            $stmtOrder->execute([$courseId]);
+            $nextOrder = (int)$stmtOrder->fetchColumn();
+            if ($nextOrder <= 0) $nextOrder = 1;
+
+            if (empty($newColTitle)) {
+                $newColTitle = !empty($title) ? $title : ('الحصة ' . $nextOrder);
+            }
+
+            $newColPrice = (float)($_POST['new_collection_price'] ?? 70.0);
+            if ($newColPrice <= 0) $newColPrice = 70.0;
+
+            $customOrder = !empty($_POST['new_collection_order']) ? (int)$_POST['new_collection_order'] : 0;
+            $finalOrder = ($customOrder > 0) ? $customOrder : $nextOrder;
+
+            $collectionId = generateId(5);
+            $insCol = $db->prepare("INSERT INTO Collection (id, title, price, courseId, `order`, updatedAt) VALUES (?, ?, ?, ?, ?, NOW())");
+            $insCol->execute([$collectionId, $newColTitle, $newColPrice, $courseId, $finalOrder]);
+            $createdLessonTitle = $newColTitle;
         }
 
         try {
@@ -80,12 +109,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_content'])) {
                 if ($editId) {
                     $stmt = $db->prepare("UPDATE Video SET title = ?, description = ?, link = ?, courseId = ?, collectionId = ?, published = ?, updatedAt = NOW() WHERE id = ?");
                     $stmt->execute([$title, $description, $link, $courseId, $collectionId, $published, $editId]);
-                    $_SESSION['content_msg'] = 'تم تحديث الفيديو بنجاح!';
+                    $_SESSION['content_msg'] = $createdLessonTitle 
+                        ? "تم تحديث الفيديو ونقله إلى الحصة الجديدة ($createdLessonTitle) بنجاح!" 
+                        : "تم تحديث الفيديو بنجاح!";
                 } else {
                     $vId = generateId(5);
                     $stmt = $db->prepare("INSERT INTO Video (id, title, description, link, courseId, collectionId, published, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())");
                     $stmt->execute([$vId, $title, $description, $link, $courseId, $collectionId, $published]);
-                    $_SESSION['content_msg'] = 'تم إضافة الفيديو بنجاح!';
+                    $_SESSION['content_msg'] = $createdLessonTitle 
+                        ? "تم إنشاء الحصة الجديدة ($createdLessonTitle) وإضافة الفيديو بداخلها بنجاح!" 
+                        : "تم إضافة الفيديو بنجاح!";
                 }
                 $_SESSION['content_msg_type'] = 'success';
 
@@ -111,12 +144,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_content'])) {
                 if ($editId) {
                     $stmt = $db->prepare("UPDATE File SET title = ?, description = ?, link = ?, courseId = ?, collectionId = ?, published = ?, updatedAt = NOW() WHERE id = ?");
                     $stmt->execute([$title, $description, $link, $courseId, $collectionId, $published, $editId]);
-                    $_SESSION['content_msg'] = 'تم تحديث الملف بنجاح!';
+                    $_SESSION['content_msg'] = $createdLessonTitle 
+                        ? "تم تحديث الملف ونقله إلى الحصة الجديدة ($createdLessonTitle) بنجاح!" 
+                        : "تم تحديث الملف بنجاح!";
                 } else {
                     $fId = generateId(5);
                     $stmt = $db->prepare("INSERT INTO File (id, title, description, link, courseId, collectionId, published, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())");
                     $stmt->execute([$fId, $title, $description, $link, $courseId, $collectionId, $published]);
-                    $_SESSION['content_msg'] = 'تم إضافة الملف بنجاح!';
+                    $_SESSION['content_msg'] = $createdLessonTitle 
+                        ? "تم إنشاء الحصة الجديدة ($createdLessonTitle) وإضافة الملف بداخلها بنجاح!" 
+                        : "تم إضافة الملف بنجاح!";
                 }
                 $_SESSION['content_msg_type'] = 'success';
 
@@ -132,12 +169,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_content'])) {
                     if (!empty($rawQuestions)) {
                         $db->prepare("DELETE FROM Question WHERE quizId = ?")->execute([$quizId]);
                     }
-                    $_SESSION['content_msg'] = 'تم تحديث بيانات الامتحان بنجاح!';
+                    $_SESSION['content_msg'] = $createdLessonTitle 
+                        ? "تم تحديث الامتحان ونقله إلى الحصة الجديدة ($createdLessonTitle) بنجاح!" 
+                        : "تم تحديث بيانات الامتحان بنجاح!";
                 } else {
                     $quizId = generateId(5);
                     $stmt = $db->prepare("INSERT INTO Quiz (id, title, description, quizTime, courseId, collectionId, published, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())");
                     $stmt->execute([$quizId, $title, $description, $quizTime, $courseId, $collectionId, $published]);
-                    $_SESSION['content_msg'] = 'تم إنشاء الامتحان بنجاح!';
+                    $_SESSION['content_msg'] = $createdLessonTitle 
+                        ? "تم إنشاء الحصة الجديدة ($createdLessonTitle) وإضافة الامتحان بداخلها بنجاح!" 
+                        : "تم إنشاء الامتحان بنجاح!";
                 }
 
                 // Insert questions
@@ -545,10 +586,33 @@ require_once __DIR__ . '/header.php';
 
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1">الحصة / الباب / المجموعة *</label>
-                        <select name="collectionId" id="modalCollectionSelect" class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-[#0f766e]">
+                        <select name="collectionId" id="modalCollectionSelect" onchange="onCollectionChange()" class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-[#0f766e]">
                             <option value="">اختر الكورس أولاً</option>
                         </select>
                     </div>
+                </div>
+
+                <!-- Card for New Lesson Details (Visible when creating a new lesson automatically) -->
+                <div id="newCollectionSection" class="hidden p-4 rounded-2xl border border-amber-300 bg-amber-50/70 space-y-3">
+                    <div class="flex items-center gap-2 text-xs font-black text-amber-900">
+                        <i class="fa-solid fa-folder-plus text-amber-600"></i>
+                        <span>بيانات الحصة / الدرس الجديد الذي سيتم إنشاؤه:</span>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                        <div class="sm:col-span-6">
+                            <label class="block text-[11px] font-bold text-slate-700 mb-1">اسم الحصة الجديدة</label>
+                            <input type="text" name="new_collection_title" id="newCollectionTitle" placeholder="مثال: الحصة الثانية (أو اتركه فارغاً ليأخذ عنوان المحتوى)" class="w-full px-3 py-2 bg-white border border-amber-200 rounded-xl text-xs font-bold outline-none focus:border-amber-600"/>
+                        </div>
+                        <div class="sm:col-span-3">
+                            <label class="block text-[11px] font-bold text-slate-700 mb-1">سعر الحصة (ج.م)</label>
+                            <input type="number" step="0.5" name="new_collection_price" id="newCollectionPrice" value="70" class="w-full px-3 py-2 bg-white border border-amber-200 rounded-xl text-xs font-bold outline-none focus:border-amber-600"/>
+                        </div>
+                        <div class="sm:col-span-3">
+                            <label class="block text-[11px] font-bold text-slate-700 mb-1">ترتيب الحصة</label>
+                            <input type="number" name="new_collection_order" id="newCollectionOrder" placeholder="تلقائي" class="w-full px-3 py-2 bg-white border border-amber-200 rounded-xl text-xs font-bold outline-none focus:border-amber-600"/>
+                        </div>
+                    </div>
+                    <p class="text-[11px] text-amber-800 font-medium">💡 سيتم إنشاء هذه الحصة تلقائياً كدرس جديد مستقل في الكورس وإدراج هذا المحتوى بداخلها.</p>
                 </div>
 
                 <div>
@@ -758,6 +822,13 @@ function openAddContentModal(cType = 'VIDEO', courseId = null, collectionId = nu
     document.getElementById('questionsContainer').innerHTML = '';
     qCount = 0;
 
+    const nTitle = document.getElementById('newCollectionTitle');
+    if (nTitle) nTitle.value = '';
+    const nPrice = document.getElementById('newCollectionPrice');
+    if (nPrice) nPrice.value = '70';
+    const nOrder = document.getElementById('newCollectionOrder');
+    if (nOrder) nOrder.value = '';
+
     if (courseId) {
         const cSel = document.getElementById('modalCourseSelect');
         if (cSel) {
@@ -768,7 +839,11 @@ function openAddContentModal(cType = 'VIDEO', courseId = null, collectionId = nu
                 if (colSel) colSel.value = collectionId;
             }
         }
+    } else {
+        const colSel = document.getElementById('modalCollectionSelect');
+        if (colSel) colSel.value = '';
     }
+    onCollectionChange();
 
     setVideoSource('YOUTUBE');
     onContentTypeChange();
@@ -788,6 +863,13 @@ function openEditContentModal(item) {
     document.getElementById('contentDescription').value = item.description || '';
     document.getElementById('publishedCheckbox').checked = (item.published == 1 || item.published === '1');
 
+    const nTitle = document.getElementById('newCollectionTitle');
+    if (nTitle) nTitle.value = '';
+    const nPrice = document.getElementById('newCollectionPrice');
+    if (nPrice) nPrice.value = '70';
+    const nOrder = document.getElementById('newCollectionOrder');
+    if (nOrder) nOrder.value = '';
+
     const courseSelect = document.getElementById('modalCourseSelect');
     if (courseSelect) {
         courseSelect.value = item.courseId || '';
@@ -796,6 +878,7 @@ function openEditContentModal(item) {
         if (colSelect && item.collectionId) {
             colSelect.value = item.collectionId;
         }
+        onCollectionChange();
     }
 
     const itemType = (item.itemType || 'VIDEO').toUpperCase();
@@ -837,6 +920,29 @@ function closeModal(id) {
     document.getElementById(id).classList.add('hidden');
 }
 
+function onCollectionChange() {
+    const colSelect = document.getElementById('modalCollectionSelect');
+    const val = colSelect ? colSelect.value : '';
+    const sec = document.getElementById('newCollectionSection');
+    if (!sec) return;
+
+    if (val === '__AUTO__' || val === '__NEW__') {
+        sec.classList.remove('hidden');
+        const cId = document.getElementById('modalCourseSelect').value;
+        const currentCount = (collectionsData[cId] || []).length;
+        const orderInp = document.getElementById('newCollectionOrder');
+        if (orderInp && !orderInp.value) {
+            orderInp.value = currentCount + 1;
+        }
+        const titleInp = document.getElementById('newCollectionTitle');
+        if (titleInp && !titleInp.value) {
+            titleInp.placeholder = `مثال: الحصة رقم ${currentCount + 1}`;
+        }
+    } else {
+        sec.classList.add('hidden');
+    }
+}
+
 function onCourseChange() {
     const cId = document.getElementById('modalCourseSelect').value;
     const colSelect = document.getElementById('modalCollectionSelect');
@@ -844,22 +950,32 @@ function onCourseChange() {
 
     if (!cId) {
         colSelect.innerHTML = '<option value="">اختر الكورس أولاً</option>';
+        onCollectionChange();
         return;
     }
 
-    if (!collectionsData[cId] || collectionsData[cId].length === 0) {
-        colSelect.innerHTML = '<option value="__AUTO__">✨ حصة / باب افتراضي تلقائي للكورس</option>';
+    const cols = collectionsData[cId] || [];
+
+    if (cols.length === 0) {
+        colSelect.innerHTML = '<option value="__AUTO__" selected>✨ إنشاء الحصة الأولى تلقائياً لهذا الكورس</option>';
+        onCollectionChange();
         return;
     }
 
-    colSelect.innerHTML = '<option value="">اختر الحصة / الباب...</option>';
-    collectionsData[cId].forEach(col => {
+    colSelect.innerHTML = '<option value="">-- اختر الحصة أو اختر إنشاء حصة جديدة --</option>';
+    cols.forEach((col, idx) => {
         const opt = document.createElement('option');
         opt.value = col.id;
-        opt.textContent = 'حصة / باب: ' + col.title + (col.price ? ' (' + col.price + ' ج.م)' : '');
+        opt.textContent = `حصة ${col.order || (idx + 1)}: ${col.title}` + (col.price ? ` (${col.price} ج.م)` : '');
         colSelect.appendChild(opt);
     });
-    colSelect.innerHTML += '<option value="__AUTO__">✨ إنشاء حصة / باب جديد تلقائياً</option>';
+
+    const newOpt = document.createElement('option');
+    newOpt.value = '__AUTO__';
+    newOpt.textContent = `✨ + إنشاء حصة جديدة تلقائياً (الحصة رقم ${cols.length + 1})`;
+    colSelect.appendChild(newOpt);
+
+    onCollectionChange();
 }
 
 function setVideoSource(src) {
