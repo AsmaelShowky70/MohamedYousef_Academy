@@ -12,7 +12,7 @@ $q = trim($_GET['q'] ?? '');
 $sql = "
     SELECT cc.*, c.title AS courseTitle, y.name AS yearName, col.title AS collectionTitle, col.price AS collectionPrice,
            u.fullName AS studentName, u.phone AS studentPhone,
-           (SELECT CONCAT(IFNULL(deviceType,'pc'), ' | ', IFNULL(os,''), ' | ', IFNULL(browser,'')) 
+           (SELECT CONCAT_WS(' | ', IFNULL(deviceType,'pc'), IFNULL(os,''), IFNULL(browser,''), IFNULL(deviceName,''), IFNULL(ip,'')) 
             FROM Device 
             WHERE userId = cc.userId 
             LIMIT 1) as boundDeviceInfo
@@ -295,18 +295,22 @@ foreach ($allCollections as $col) {
                                 </td>
                                 <td class="p-3.5">
                                     <?php if (!empty($cd['boundDeviceInfo'])): 
-                                        $dParts = explode('|', $cd['boundDeviceInfo']);
+                                        $dParts = explode(' | ', $cd['boundDeviceInfo']);
                                         $dType = trim($dParts[0] ?? '');
                                         $dOs = trim($dParts[1] ?? '');
                                         $dBr = trim($dParts[2] ?? '');
+                                        $dName = trim($dParts[3] ?? '');
+                                        $dIp = trim($dParts[4] ?? '');
                                         $dTypeArabic = ($dType === 'phone') ? 'هاتف' : (($dType === 'tablet') ? 'تابلت' : (($dType === 'laptop') ? 'لابتوب' : 'كمبيوتر'));
                                     ?>
                                         <div>
                                             <span class="font-bold text-slate-800 text-[11px] block flex items-center gap-1">
                                                 <i class="fa-solid fa-mobile-screen text-blue-600"></i>
-                                                <?= $dTypeArabic ?> (<?= htmlspecialchars($dOs ?: 'جهاز') ?>)
+                                                <?= htmlspecialchars($dName ?: ($dOs ?: 'جهاز')) ?> (<?= $dTypeArabic ?>)
                                             </span>
-                                            <span class="text-[10px] text-slate-400 font-mono block"><?= htmlspecialchars($dBr) ?></span>
+                                            <span class="text-[10px] text-slate-400 font-mono block">
+                                                <?= htmlspecialchars($dBr) ?><?= $dIp ? ' • IP: ' . htmlspecialchars($dIp) : '' ?>
+                                            </span>
                                         </div>
                                         <button onclick="unbindCode('<?= $cd['id'] ?>')" class="mt-1 px-1.5 py-0.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded text-[9px] font-bold transition cursor-pointer" title="اضغط لفك الربط عن هذا الكود">
                                             فك ربط <i class="fa-solid fa-unlock ml-0.5"></i>

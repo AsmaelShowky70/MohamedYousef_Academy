@@ -44,50 +44,13 @@ if ($action === 'login') {
     }
 
     // Device binding check for students
-    $devId = getDeviceIdentifier();
-    $stmtAllDev = $db->prepare("SELECT * FROM Device WHERE userId = ?");
-    $stmtAllDev->execute([$user['id']]);
-    $allDevs = $stmtAllDev->fetchAll();
-
-    $existingDev = null;
-    foreach ($allDevs as $d) {
-        if ($d['identifier'] === $devId) {
-            $existingDev = $d;
-            break;
-        }
-    }
-
-    if ($existingDev) {
-        $db->prepare("UPDATE Device SET lastActiveAt = NOW() WHERE id = ?")->execute([$existingDev['id']]);
-    } else {
-        $maxAllowed = (int)($user['maxDevices'] ?? 1);
-        if ($maxAllowed < 1) $maxAllowed = 1;
-        if ($user['role'] === 'STUDENT' && count($allDevs) >= $maxAllowed) {
-            jsonResponse([
-                'success' => false,
-                'error' => "لقد تجاوزت الحد الأقصى للأجهزة المسموح بها ($maxAllowed جهاز). هذا الحساب مقيد على جهازك المسجل ولا يمكن تغييره إلا من خلال الإدارة. للتواصل مع الدعم الفني: 01092037257"
-            ], 403);
-        }
-
-        // Register new device
-        $newDevId = generateId(5);
-        $ua = $_SERVER['HTTP_USER_AGENT'] ?? '';
-        $os = 'Unknown OS';
-        if (strpos($ua, 'Windows') !== false) $os = 'Windows';
-        elseif (strpos($ua, 'Android') !== false) $os = 'Android';
-        elseif (strpos($ua, 'iPhone') !== false || strpos($ua, 'iPad') !== false) $os = 'iOS';
-        elseif (strpos($ua, 'Mac') !== false) $os = 'macOS';
-
-        $browser = 'Unknown Browser';
-        if (strpos($ua, 'Chrome') !== false) $browser = 'Chrome';
-        elseif (strpos($ua, 'Safari') !== false) $browser = 'Safari';
-        elseif (strpos($ua, 'Firefox') !== false) $browser = 'Firefox';
-        elseif (strpos($ua, 'Edge') !== false) $browser = 'Edge';
-
-        $devType = (strpos($ua, 'Mobile') !== false || strpos($ua, 'Android') !== false || strpos($ua, 'iPhone') !== false) ? 'phone' : 'pc';
-
-        $insDev = $db->prepare("INSERT INTO Device (id, userId, identifier, deviceType, browser, os, createdAt, lastActiveAt) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())");
-        $insDev->execute([$newDevId, $user['id'], $devId, $devType, $browser, $os]);
+    $devDetails = getDeviceDetails();
+    $devError = '';
+    if (!checkStudentDeviceAccess($user['id'], $devDetails, $devError)) {
+        jsonResponse([
+            'success' => false,
+            'error' => $devError
+        ], 403);
     }
 
     // Update lastLoginAt
@@ -157,25 +120,8 @@ if ($action === 'register') {
     $stmtIns->execute([$userId, $firstName, $fullName, $phone, $parentPhone, $password, $status, $studentType, $centerCode, $yearId, $nextAttendanceId]);
 
     // Register initial device for new student
-    $newDevId = generateId(5);
-    $devId = getDeviceIdentifier();
-    $ua = $_SERVER['HTTP_USER_AGENT'] ?? '';
-    $os = 'Unknown OS';
-    if (strpos($ua, 'Windows') !== false) $os = 'Windows';
-    elseif (strpos($ua, 'Android') !== false) $os = 'Android';
-    elseif (strpos($ua, 'iPhone') !== false || strpos($ua, 'iPad') !== false) $os = 'iOS';
-    elseif (strpos($ua, 'Mac') !== false) $os = 'macOS';
-
-    $browser = 'Unknown Browser';
-    if (strpos($ua, 'Chrome') !== false) $browser = 'Chrome';
-    elseif (strpos($ua, 'Safari') !== false) $browser = 'Safari';
-    elseif (strpos($ua, 'Firefox') !== false) $browser = 'Firefox';
-    elseif (strpos($ua, 'Edge') !== false) $browser = 'Edge';
-
-    $devType = (strpos($ua, 'Mobile') !== false || strpos($ua, 'Android') !== false || strpos($ua, 'iPhone') !== false) ? 'phone' : 'pc';
-
-    $insDev = $db->prepare("INSERT INTO Device (id, userId, identifier, deviceType, browser, os, createdAt, lastActiveAt) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())");
-    $insDev->execute([$newDevId, $userId, $devId, $devType, $browser, $os]);
+    $devDetails = getDeviceDetails();
+    bindUserDevice($userId, $devDetails);
 
     if ($status === 'ACTIVE') {
         $_SESSION['user_id'] = $userId;

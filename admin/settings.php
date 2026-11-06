@@ -70,6 +70,21 @@ $settings = getSettings();
             </div>
         </div>
 
+        <!-- Sequential Lessons Lock Policy -->
+        <div class="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-sm space-y-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-sm font-black text-navy-custom">إلزامية سماع الحصص بالترتيب (القفل التسلسلي للحصص)</h3>
+                    <p class="text-[11px] text-slate-400">عند التفعيل، يشترط في الكورس الكامل سماع الحصة السابقة لفتح الحصة التالية. عند التعطيل، تفتح جميع حصص الكورس المشترك به فوراً بدون قفل.</p>
+                </div>
+
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="enableSequentialLessons" <?= ($settings['enableSequentialLessons'] ?? 'true') === 'true' ? 'checked' : '' ?> class="sr-only peer">
+                    <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-custom"></div>
+                </label>
+            </div>
+        </div>
+
         <button type="submit" id="saveSettingsBtn" class="px-8 py-3.5 bg-primary-custom hover:bg-teal-800 text-white font-extrabold text-sm rounded-2xl shadow-lg transition flex items-center gap-2">
             <i class="fa-solid fa-floppy-disk"></i> حفظ وتطبيق الإعدادات
         </button>
@@ -88,7 +103,8 @@ function submitSettings(e) {
             vodafoneCashEnabled: 'false',
             whatsappFloatingEnabled: document.getElementById('whatsappFloatingEnabled').checked ? 'true' : 'false',
             whatsappFloatingNumber: document.getElementById('whatsappFloatingNumber').value.trim(),
-            requireApproval: document.getElementById('requireApproval').checked ? 'true' : 'false'
+            requireApproval: document.getElementById('requireApproval').checked ? 'true' : 'false',
+            enableSequentialLessons: document.getElementById('enableSequentialLessons').checked ? 'true' : 'false'
         }
     };
 

@@ -224,7 +224,7 @@ $enrolledCollections = $stmtEnrolledColls->fetchAll();
 $enrolledCollectionIds = array_column($enrolledCollections, 'id');
 
 // All Collections (for lesson dropdown)
-$allCollections = $db->query("SELECT cl.id, cl.title, cl.price, c.title AS courseTitle FROM Collection cl LEFT JOIN Course c ON cl.courseId = c.id ORDER BY c.title ASC, cl.order ASC")->fetchAll();
+$allCollections = $db->query("SELECT cl.id, cl.title, cl.price, cl.courseId, c.title AS courseTitle FROM Collection cl LEFT JOIN Course c ON cl.courseId = c.id ORDER BY c.title ASC, cl.order ASC")->fetchAll();
 
 // 4. Video Watch Analytics (#15)
 // Find all accessible videos (from enrolled courses OR enrolled collections)
@@ -602,8 +602,19 @@ $years = $db->query("SELECT id, name FROM Year ORDER BY `order` ASC")->fetchAll(
                                     <?php endif; ?>
                                 </div>
                                 <div>
-                                    <h4 class="text-xs font-bold text-slate-800"><?= htmlspecialchars($dev['os']) ?> - <?= htmlspecialchars($dev['browser']) ?> (<?= $dTypeArabic ?>)</h4>
-                                    <p class="text-[10px] text-slate-400 font-mono mt-0.5">آخر نشاط: <?= substr($dev['lastActiveAt'], 0, 16) ?></p>
+                                    <h4 class="text-xs font-bold text-slate-800 flex items-center gap-2">
+                                        <span><?= htmlspecialchars(!empty($dev['deviceName']) ? $dev['deviceName'] : ($dev['os'] . ' - ' . $dev['browser'])) ?></span>
+                                        <span class="text-[10px] text-slate-500 font-normal">(<?= $dTypeArabic ?>)</span>
+                                    </h4>
+                                    <div class="flex flex-wrap items-center gap-2 mt-1 text-[10px] text-slate-500 font-mono">
+                                        <span><?= htmlspecialchars($dev['os']) ?> - <?= htmlspecialchars($dev['browser']) ?></span>
+                                        <?php if (!empty($dev['ip'])): ?>
+                                            <span class="text-slate-300">•</span>
+                                            <span class="text-teal-700 font-bold bg-teal-50 px-1.5 py-0.5 rounded border border-teal-200">IP: <?= htmlspecialchars($dev['ip']) ?></span>
+                                        <?php endif; ?>
+                                        <span class="text-slate-300">•</span>
+                                        <span>آخر نشاط: <?= substr($dev['lastActiveAt'], 0, 16) ?></span>
+                                    </div>
                                 </div>
                             </div>
                             <form method="POST" onsubmit="return confirm('هل تريد فك ربط هذا الجهاز؟')" class="no-print">
@@ -642,7 +653,7 @@ $years = $db->query("SELECT id, name FROM Year ORDER BY `order` ASC")->fetchAll(
                     <input type="hidden" name="student_id" value="<?= htmlspecialchars($studentId) ?>">
                     <div>
                         <label class="block text-xs font-bold text-teal-900 mb-1.5">إضافة كورس كامل مباشرة:</label>
-                        <select name="courseId" required class="w-full px-3 py-2 text-xs font-bold bg-white border border-teal-200 rounded-xl focus:border-[#0f766e] outline-none mb-3">
+                        <select name="courseId" id="enrollCourseSelect" onchange="syncCourseFilter(this.value)" required class="w-full px-3 py-2 text-xs font-bold bg-white border border-teal-200 rounded-xl focus:border-[#0f766e] outline-none mb-3">
                             <option value="">-- اختر الكورس المطلوب --</option>
                             <?php foreach ($allCourses as $ac): ?>
                                 <option value="<?= htmlspecialchars($ac['id']) ?>"><?= htmlspecialchars($ac['title']) ?> (<?= htmlspecialchars($ac['yearName'] ?: 'عام') ?>)</option>
@@ -658,16 +669,38 @@ $years = $db->query("SELECT id, name FROM Year ORDER BY `order` ASC")->fetchAll(
                 <form method="POST" action="/admin/student_profile.php?id=<?= urlencode($studentId) ?>" class="p-4 bg-amber-50/50 border border-amber-100 rounded-xl flex flex-col justify-between">
                     <input type="hidden" name="action" value="enroll_collection">
                     <input type="hidden" name="student_id" value="<?= htmlspecialchars($studentId) ?>">
-                    <div>
-                        <label class="block text-xs font-bold text-amber-900 mb-1.5">إضافة حصة / درس منفرد مباشرة:</label>
-                        <select name="collectionId" required class="w-full px-3 py-2 text-xs font-bold bg-white border border-amber-200 rounded-xl focus:border-amber-600 outline-none mb-3">
-                            <option value="">-- اختر الحصة المطلوبة --</option>
-                            <?php foreach ($allCollections as $acl): ?>
-                                <option value="<?= htmlspecialchars($acl['id']) ?>"><?= htmlspecialchars($acl['title']) ?> (<?= htmlspecialchars($acl['courseTitle'] ?: 'كورس') ?>)</option>
-                            <?php endforeach; ?>
-                        </select>
+                    <div class="space-y-3">
+                        <label class="block text-xs font-bold text-amber-900">إضافة حصة / درس منفرد مباشرة:</label>
+                        
+                        <!-- 1. Filter by Course -->
+                        <div>
+                            <span class="block text-[11px] font-bold text-slate-700 mb-1 flex items-center gap-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="text-amber-600"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+                                <span>1. اختر الكورس أولاً لتصفية حصصه:</span>
+                            </span>
+                            <select id="filterCourseSelect" onchange="filterLessonsByCourse(this.value)" class="w-full px-3 py-2 text-xs font-bold bg-white border border-amber-300 rounded-xl focus:border-amber-600 outline-none">
+                                <option value="">-- اختر الكورس المطلوب لعرض حصصه فقط --</option>
+                                <?php foreach ($allCourses as $ac): ?>
+                                    <option value="<?= htmlspecialchars($ac['id']) ?>"><?= htmlspecialchars($ac['title']) ?> (<?= htmlspecialchars($ac['yearName'] ?: 'عام') ?>)</option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+
+                        <!-- 2. Select Specific Lesson -->
+                        <div>
+                            <span class="block text-[11px] font-bold text-slate-700 mb-1 flex items-center justify-between">
+                                <span>2. اختر الحصة / الدرس:</span>
+                                <span id="lessonsCounter" class="text-[10px] text-amber-800 font-bold"></span>
+                            </span>
+                            <select name="collectionId" id="lessonCollectionSelect" required class="w-full px-3 py-2 text-xs font-bold bg-white border border-amber-300 rounded-xl focus:border-amber-600 outline-none mb-1">
+                                <option value="">-- يرجى اختيار الكورس أولاً لتظهر حصصه --</option>
+                                <?php foreach ($allCollections as $acl): ?>
+                                    <option value="<?= htmlspecialchars($acl['id']) ?>" data-course-id="<?= htmlspecialchars($acl['courseId'] ?? '') ?>"><?= htmlspecialchars($acl['title']) ?> (<?= htmlspecialchars($acl['courseTitle'] ?: 'كورس') ?>)</option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
                     </div>
-                    <button type="submit" class="w-full py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl shadow transition cursor-pointer">
+                    <button type="submit" class="w-full mt-3 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl shadow transition cursor-pointer">
                         + تفعيل الحصة للطالب
                     </button>
                 </form>
@@ -877,6 +910,67 @@ function toggleEditCenterCode(val) {
         wrap.classList.add('hidden');
     }
 }
+
+// Dynamic Course -> Lessons Filter
+let cachedLessonOptions = null;
+
+function filterLessonsByCourse(courseId) {
+    const lessonSelect = document.getElementById('lessonCollectionSelect');
+    const counter = document.getElementById('lessonsCounter');
+    if (!lessonSelect) return;
+
+    if (!cachedLessonOptions) {
+        cachedLessonOptions = Array.from(lessonSelect.querySelectorAll('option[data-course-id]'));
+    }
+
+    lessonSelect.innerHTML = '';
+
+    if (!courseId) {
+        const defaultOpt = document.createElement('option');
+        defaultOpt.value = '';
+        defaultOpt.textContent = '-- يرجى اختيار الكورس أولاً لتظهر حصصه --';
+        lessonSelect.appendChild(defaultOpt);
+        if (counter) counter.textContent = '';
+        return;
+    }
+
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = '-- اختر الحصة من هذا الكورس --';
+    lessonSelect.appendChild(placeholder);
+
+    let matchCount = 0;
+    cachedLessonOptions.forEach(opt => {
+        if (opt.getAttribute('data-course-id') === courseId) {
+            lessonSelect.appendChild(opt.cloneNode(true));
+            matchCount++;
+        }
+    });
+
+    if (matchCount === 0) {
+        placeholder.textContent = '-- لا توجد حصص مضافة داخل هذا الكورس بعد --';
+        if (counter) counter.textContent = '(0 حصص)';
+    } else {
+        if (counter) counter.textContent = '(' + matchCount + ' حصة متاحة)';
+    }
+}
+
+function syncCourseFilter(courseId) {
+    const filter = document.getElementById('filterCourseSelect');
+    if (filter && (!filter.value || filter.value !== courseId)) {
+        filter.value = courseId;
+        filterLessonsByCourse(courseId);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const filter = document.getElementById('filterCourseSelect');
+    if (filter && filter.value) {
+        filterLessonsByCourse(filter.value);
+    } else {
+        filterLessonsByCourse('');
+    }
+});
 </script>
 
 <?php require_once __DIR__ . '/footer.php'; ?>

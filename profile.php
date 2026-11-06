@@ -346,10 +346,13 @@ require_once __DIR__ . '/includes/header.php';
                                                         </div>
                                                         <div class="text-right">
                                                             <div class="flex items-center gap-2">
-                                                                <p class="font-bold text-slate-900 dark:text-white"><?= htmlspecialchars($dev['os']) ?> - <?= htmlspecialchars($dev['browser']) ?></p>
+                                                                <p class="font-bold text-slate-900 dark:text-white"><?= htmlspecialchars(!empty($dev['deviceName']) ? $dev['deviceName'] : ($dev['os'] . ' - ' . $dev['browser'])) ?></p>
                                                                 <span class="text-[11px] bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 font-medium px-2 py-0.5 rounded-full">معتمد</span>
                                                             </div>
-                                                            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">النوع: <strong class="text-slate-700 dark:text-slate-300"><?= $devTypeArabic ?></strong></p>
+                                                            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">النوع: <strong class="text-slate-700 dark:text-slate-300"><?= $devTypeArabic ?></strong> (<?= htmlspecialchars($dev['os']) ?> - <?= htmlspecialchars($dev['browser']) ?>)</p>
+                                                            <?php if (!empty($dev['ip'])): ?>
+                                                                <p class="text-[11px] text-teal-600 dark:text-teal-400 font-mono mt-0.5">IP: <?= htmlspecialchars($dev['ip']) ?></p>
+                                                            <?php endif; ?>
                                                             <p class="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">آخر نشاط: <?= $lastActive ?></p>
                                                         </div>
                                                     </div>

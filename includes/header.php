@@ -27,6 +27,9 @@ $whatsappEnabled = getSetting('whatsappFloatingEnabled', 'true') === 'true';
     })();
     </script>
 
+    <!-- Persistent Device Vault & Multi-Layer Fingerprint -->
+    <script src="/public/js/device.js"></script>
+
     <!-- Google Fonts: Cairo & Almarai -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

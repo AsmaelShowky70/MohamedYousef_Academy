@@ -95,13 +95,16 @@ function submitRegister(e) {
     btn.disabled = true;
     btn.innerHTML = '<i class="fa-solid fa-spinner animate-spin"></i> جاري الإنشاء...';
 
+    const devVault = (typeof window.getDeviceVault === 'function') ? window.getDeviceVault() : {};
     const payload = {
         fullName: document.getElementById('fullName').value,
         phone: document.getElementById('phone').value,
         parentPhone: document.getElementById('parentPhone').value,
         yearId: document.getElementById('yearId').value,
         password: document.getElementById('password').value,
-        centerCode: document.getElementById('centerCode') ? document.getElementById('centerCode').value.trim() : ''
+        centerCode: document.getElementById('centerCode') ? document.getElementById('centerCode').value.trim() : '',
+        device_uuid: devVault.uuid || '',
+        device_name: devVault.name || ''
     };
 
     fetch('/api/auth.php?action=register', {

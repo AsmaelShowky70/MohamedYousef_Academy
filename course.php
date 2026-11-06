@@ -159,56 +159,63 @@ foreach ($collections as $idx => &$col) {
     }
 
     // Check purchase status
-    $col['isPurchased'] = $isAdmin || $isFullCourseAccess || in_array($col['id'], $enrolledCollectionIds);
+    $isDirectLessonEnrolled = in_array($col['id'], $enrolledCollectionIds);
+    $col['isPurchased'] = $isAdmin || $isFullCourseAccess || $isDirectLessonEnrolled;
 
     // Check Prerequisite Lock: Student cannot access collection $idx if previous collection ($idx - 1)
     // has unwatched explanation video, unwatched solution video, or unpassed quiz/task!
+    // NOTE: Direct lesson enrollments (purchased single lesson or teacher direct unlock) are NEVER locked by prior lessons!
     $col['isPrerequisiteLocked'] = false;
     $col['prerequisiteInfo'] = null;
 
-    if (!$isAdmin && $idx > 0) {
+    $sequentialLessonsEnabled = getSetting('enableSequentialLessons', 'true') !== 'false';
+
+    if (!$isAdmin && $sequentialLessonsEnabled && !$isDirectLessonEnrolled && $idx > 0) {
         $prevCol = $collections[$idx - 1];
 
-        // 1. Explanation Video (First video of previous lesson)
-        $prevExplanation = $prevCol['videos'][0] ?? null;
-        $watchedExplanation = $prevExplanation ? in_array($prevExplanation['id'], $watchedVideoIds) : true;
+        // Previous collection can only lock the student if the student actually owns/purchased that previous collection
+        if (!empty($prevCol['isPurchased'])) {
+            // 1. Explanation Video (First video of previous lesson)
+            $prevExplanation = $prevCol['videos'][0] ?? null;
+            $watchedExplanation = $prevExplanation ? in_array($prevExplanation['id'], $watchedVideoIds) : true;
 
-        // 2. Solution Video (Second video of previous lesson, if uploaded)
-        $prevSolution = $prevCol['videos'][1] ?? null;
-        $watchedSolution = $prevSolution ? in_array($prevSolution['id'], $watchedVideoIds) : true;
+            // 2. Solution Video (Second video of previous lesson, if uploaded)
+            $prevSolution = $prevCol['videos'][1] ?? null;
+            $watchedSolution = $prevSolution ? in_array($prevSolution['id'], $watchedVideoIds) : true;
 
-        // 3. Quiz / Task of previous lesson (if uploaded)
-        $hasPrevQuiz = !empty($prevCol['quizzes']);
-        $passedPrevQuiz = true;
-        $lockingQuizItem = null;
-        if ($hasPrevQuiz) {
-            $passedPrevQuiz = false;
-            foreach ($prevCol['quizzes'] as $pq) {
-                if (in_array($pq['id'], $passedQuizIds)) {
-                    $passedPrevQuiz = true;
-                    break;
+            // 3. Quiz / Task of previous lesson (if uploaded)
+            $hasPrevQuiz = !empty($prevCol['quizzes']);
+            $passedPrevQuiz = true;
+            $lockingQuizItem = null;
+            if ($hasPrevQuiz) {
+                $passedPrevQuiz = false;
+                foreach ($prevCol['quizzes'] as $pq) {
+                    if (in_array($pq['id'], $passedQuizIds)) {
+                        $passedPrevQuiz = true;
+                        break;
+                    }
+                }
+                if (!$passedPrevQuiz) {
+                    $lockingQuizItem = $prevCol['quizzes'][0];
                 }
             }
-            if (!$passedPrevQuiz) {
-                $lockingQuizItem = $prevCol['quizzes'][0];
-            }
-        }
 
-        if (!$watchedExplanation || !$watchedSolution || !$passedPrevQuiz) {
-            $col['isPrerequisiteLocked'] = true;
-            $col['prerequisiteInfo'] = [
-                'prevTitle' => $prevCol['title'],
-                'prevId' => $prevCol['id'],
-                'hasExplanation' => !empty($prevExplanation),
-                'watchedExplanation' => $watchedExplanation,
-                'explanationVideo' => $prevExplanation,
-                'hasSolution' => !empty($prevSolution),
-                'watchedSolution' => $watchedSolution,
-                'solutionVideo' => $prevSolution,
-                'hasQuiz' => $hasPrevQuiz,
-                'passedQuiz' => $passedPrevQuiz,
-                'quiz' => $lockingQuizItem
-            ];
+            if (!$watchedExplanation || !$watchedSolution || !$passedPrevQuiz) {
+                $col['isPrerequisiteLocked'] = true;
+                $col['prerequisiteInfo'] = [
+                    'prevTitle' => $prevCol['title'],
+                    'prevId' => $prevCol['id'],
+                    'hasExplanation' => !empty($prevExplanation),
+                    'watchedExplanation' => $watchedExplanation,
+                    'explanationVideo' => $prevExplanation,
+                    'hasSolution' => !empty($prevSolution),
+                    'watchedSolution' => $watchedSolution,
+                    'solutionVideo' => $prevSolution,
+                    'hasQuiz' => $hasPrevQuiz,
+                    'passedQuiz' => $passedPrevQuiz,
+                    'quiz' => $lockingQuizItem
+                ];
+            }
         }
     }
 

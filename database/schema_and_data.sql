@@ -245,10 +245,12 @@ CREATE TABLE `Device` (
   `deviceType` varchar(50) DEFAULT 'other',
   `browser` varchar(100) DEFAULT NULL,
   `os` varchar(100) DEFAULT NULL,
+  `deviceName` varchar(150) DEFAULT NULL,
+  `ip` varchar(45) DEFAULT NULL,
   `createdAt` datetime DEFAULT current_timestamp(),
   `lastActiveAt` datetime DEFAULT current_timestamp(),
   PRIMARY KEY (`id`),
-  UNIQUE KEY `identifier` (`identifier`),
+  KEY `identifier` (`identifier`),
   KEY `userId` (`userId`),
   CONSTRAINT `Device_ibfk_1` FOREIGN KEY (`userId`) REFERENCES `User` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

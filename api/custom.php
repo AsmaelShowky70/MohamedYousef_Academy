@@ -396,6 +396,9 @@ if ($action === 'check-vfc-payment') {
 // 9. POST remove-device
 if ($action === 'remove-device') {
     $user = requireAuth();
+    if (strtoupper($user['role'] ?? '') === 'STUDENT') {
+        jsonResponse(['success' => false, 'error' => 'فك ربط الأجهزة متاح فقط من خلال إدارة المنصة أو المدرس'], 403);
+    }
     $deviceId = trim($input['deviceId'] ?? ($input['id'] ?? ''));
 
     if (!$deviceId) {

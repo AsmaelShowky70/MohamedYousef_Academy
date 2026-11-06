@@ -3,12 +3,38 @@
 // Global Helpers and Authentication Utilities
 // ========================================================
 
+function isHttps() {
+    if (!empty($_SERVER['HTTPS']) && strtolower($_SERVER['HTTPS']) !== 'off') return true;
+    if (isset($_SERVER['SERVER_PORT']) && ($_SERVER['SERVER_PORT'] == 443)) return true;
+    if (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && strtolower($_SERVER['HTTP_X_FORWARDED_PROTO']) === 'https') return true;
+    if (!empty($_SERVER['HTTP_CF_VISITOR']) && strpos($_SERVER['HTTP_CF_VISITOR'], 'https') !== false) return true;
+    return false;
+}
+
+function getClientIP() {
+    $headers = [
+        'HTTP_CF_CONNECTING_IP',
+        'HTTP_X_REAL_IP',
+        'HTTP_X_FORWARDED_FOR',
+        'REMOTE_ADDR'
+    ];
+    foreach ($headers as $h) {
+        if (!empty($_SERVER[$h])) {
+            $ip = trim(explode(',', $_SERVER[$h])[0]);
+            if (filter_var($ip, FILTER_VALIDATE_IP)) {
+                return $ip;
+            }
+        }
+    }
+    return $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+}
+
 if (ob_get_level() === 0) {
     ob_start();
 }
 
 if (session_status() === PHP_SESSION_NONE) {
-    $lifetime = 30 * 24 * 60 * 60; // 30 days
+    $lifetime = 365 * 24 * 60 * 60; // 1 year session lifetime
     ini_set('session.gc_maxlifetime', (string)$lifetime);
     ini_set('session.cookie_lifetime', (string)$lifetime);
     if (!headers_sent()) {
@@ -16,7 +42,7 @@ if (session_status() === PHP_SESSION_NONE) {
             'lifetime' => $lifetime,
             'path' => '/',
             'domain' => '',
-            'secure' => (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off'),
+            'secure' => isHttps(),
             'httponly' => true,
             'samesite' => 'Lax'
         ]);
@@ -30,8 +56,8 @@ function setRememberToken($userId, $passwordHash) {
     $secretKey = 'MohamedYousef_SecretAuthKey_2026';
     $hash = hash_hmac('sha256', $userId . $passwordHash, $secretKey);
     $token = $userId . ':' . $hash;
-    $expire = time() + (30 * 24 * 60 * 60); // 30 days
-    $secure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
+    $expire = time() + (365 * 24 * 60 * 60); // 1 year
+    $secure = isHttps();
     setcookie('my_remember_token', $token, [
         'expires' => $expire,
         'path' => '/',
@@ -43,7 +69,7 @@ function setRememberToken($userId, $passwordHash) {
 }
 
 function clearRememberToken() {
-    $secure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
+    $secure = isHttps();
     setcookie('my_remember_token', '', [
         'expires' => time() - 86400,
         'path' => '/',
@@ -89,6 +115,226 @@ function generateCode($prefix = 'MY') {
     return $prefix . '-' . $rand;
 }
 
+function ensureDeviceColumnsExist($db) {
+    static $checked = false;
+    if ($checked || !$db) return;
+    $checked = true;
+    try {
+        $cols = $db->query("SHOW COLUMNS FROM Device LIKE 'ip'")->fetchAll();
+        if (empty($cols)) {
+            @$db->exec("ALTER TABLE Device ADD COLUMN ip VARCHAR(45) NULL DEFAULT NULL AFTER os");
+        }
+    } catch (Exception $e) {}
+    try {
+        $cols = $db->query("SHOW COLUMNS FROM Device LIKE 'deviceName'")->fetchAll();
+        if (empty($cols)) {
+            @$db->exec("ALTER TABLE Device ADD COLUMN deviceName VARCHAR(150) NULL DEFAULT NULL AFTER os");
+        }
+    } catch (Exception $e) {}
+}
+
+function getDeviceDetails() {
+    $input = getJsonInput();
+    $rawUuid = trim($input['device_uuid'] ?? ($_POST['device_uuid'] ?? ($_SERVER['HTTP_X_DEVICE_UUID'] ?? ($_COOKIE['my_device_uuid'] ?? ''))));
+
+    if (!preg_match('/^[a-zA-Z0-9_\-]{16,128}$/', $rawUuid)) {
+        $rawUuid = bin2hex(random_bytes(16));
+    }
+
+    if (!headers_sent() && (empty($_COOKIE['my_device_uuid']) || $_COOKIE['my_device_uuid'] !== $rawUuid)) {
+        setcookie('my_device_uuid', $rawUuid, [
+            'expires' => time() + (10 * 365 * 24 * 60 * 60),
+            'path' => '/',
+            'secure' => isHttps(),
+            'httponly' => false,
+            'samesite' => 'Lax'
+        ]);
+    }
+    $_COOKIE['my_device_uuid'] = $rawUuid;
+
+    $clientDevName = trim($input['device_name'] ?? ($_POST['device_name'] ?? ($_SERVER['HTTP_X_DEVICE_NAME'] ?? ($_COOKIE['my_device_name'] ?? ''))));
+    if ($clientDevName) {
+        $clientDevName = urldecode($clientDevName);
+    }
+
+    $ua = $_SERVER['HTTP_USER_AGENT'] ?? '';
+
+    $os = 'Unknown OS';
+    $deviceType = 'pc';
+    if (strpos($ua, 'Windows NT 10.0') !== false) $os = 'Windows 10/11';
+    elseif (strpos($ua, 'Windows') !== false) $os = 'Windows';
+    elseif (strpos($ua, 'Android') !== false) {
+        $os = 'Android';
+        $deviceType = 'phone';
+    } elseif (strpos($ua, 'iPhone') !== false) {
+        $os = 'iOS';
+        $deviceType = 'phone';
+    } elseif (strpos($ua, 'iPad') !== false) {
+        $os = 'iPadOS';
+        $deviceType = 'tablet';
+    } elseif (strpos($ua, 'Macintosh') !== false || strpos($ua, 'Mac OS X') !== false) {
+        $os = 'macOS';
+        $deviceType = 'pc';
+    } elseif (strpos($ua, 'CrOS') !== false) {
+        $os = 'ChromeOS';
+        $deviceType = 'laptop';
+    } elseif (strpos($ua, 'Linux') !== false) {
+        $os = 'Linux';
+    }
+
+    if (strpos($ua, 'Tablet') !== false) {
+        $deviceType = 'tablet';
+    }
+
+    $browser = 'Unknown Browser';
+    if (strpos($ua, 'SamsungBrowser') !== false) $browser = 'Samsung Internet';
+    elseif (strpos($ua, 'Edg/') !== false) $browser = 'Microsoft Edge';
+    elseif (strpos($ua, 'Chrome') !== false && strpos($ua, 'Edg') === false) $browser = 'Chrome';
+    elseif (strpos($ua, 'Safari') !== false && strpos($ua, 'Chrome') === false) $browser = 'Safari';
+    elseif (strpos($ua, 'Firefox') !== false) $browser = 'Firefox';
+    elseif (strpos($ua, 'Opera') !== false || strpos($ua, 'OPR') !== false) $browser = 'Opera';
+
+    $deviceName = $clientDevName;
+    if (!$deviceName) {
+        if ($os === 'Android') {
+            if (preg_match('/SM-[A-Z0-9]+/i', $ua, $m)) {
+                $deviceName = 'Samsung ' . $m[0];
+            } elseif (preg_match('/Redmi[^;\)]+/i', $ua, $m)) {
+                $deviceName = $m[0];
+            } elseif (preg_match('/POCO[^;\)]+/i', $ua, $m)) {
+                $deviceName = $m[0];
+            } elseif (preg_match('/Android\s+[\d\.]+;\s*([^;\)]+?)(?:\s+Build|\))/i', $ua, $m)) {
+                $deviceName = trim($m[1]);
+            } else {
+                $deviceName = 'هاتف أندرويد';
+            }
+        } elseif ($os === 'iOS') {
+            $deviceName = (strpos($ua, 'iPad') !== false) ? 'آيباد Apple' : 'آيفون Apple';
+        } elseif (strpos($os, 'Windows') !== false) {
+            $deviceName = 'كمبيوتر ويندوز';
+        } elseif ($os === 'macOS') {
+            $deviceName = 'جهاز ماك';
+        } else {
+            $deviceName = 'جهاز متصفح';
+        }
+    }
+
+    $ip = getClientIP();
+
+    return [
+        'uuid' => $rawUuid,
+        'identifier' => hash('sha256', 'MY_DEV_' . $rawUuid),
+        'deviceType' => $deviceType,
+        'os' => $os,
+        'browser' => $browser,
+        'deviceName' => $deviceName,
+        'ip' => $ip
+    ];
+}
+
+function getDeviceIdentifier() {
+    $dev = getDeviceDetails();
+    return $dev['identifier'];
+}
+
+function bindUserDevice($userId, $devDetails = null) {
+    $db = getDB();
+    ensureDeviceColumnsExist($db);
+    if ($devDetails === null) {
+        $devDetails = getDeviceDetails();
+    }
+
+    $devId = $devDetails['identifier'];
+    $newRowId = generateId(5);
+
+    $chk = $db->prepare("SELECT id FROM Device WHERE userId = ? AND identifier = ? LIMIT 1");
+    $chk->execute([$userId, $devId]);
+    $existing = $chk->fetch();
+
+    if ($existing) {
+        try {
+            $up = $db->prepare("UPDATE Device SET lastActiveAt = NOW(), ip = ?, deviceName = ?, browser = ?, os = ?, deviceType = ? WHERE id = ?");
+            $up->execute([$devDetails['ip'], $devDetails['deviceName'], $devDetails['browser'], $devDetails['os'], $devDetails['deviceType'], $existing['id']]);
+        } catch (Exception $e) {
+            try {
+                $up = $db->prepare("UPDATE Device SET lastActiveAt = NOW() WHERE id = ?");
+                $up->execute([$existing['id']]);
+            } catch (Exception $e2) {}
+        }
+        return $existing['id'];
+    }
+
+    try {
+        $ins = $db->prepare("INSERT INTO Device (id, userId, identifier, deviceType, browser, os, deviceName, ip, createdAt, lastActiveAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())");
+        $ins->execute([$newRowId, $userId, $devId, $devDetails['deviceType'], $devDetails['browser'], $devDetails['os'], $devDetails['deviceName'], $devDetails['ip']]);
+        return $newRowId;
+    } catch (Exception $e) {
+        try {
+            $ins = $db->prepare("INSERT INTO Device (id, userId, identifier, deviceType, browser, os, createdAt, lastActiveAt) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())");
+            $ins->execute([$newRowId, $userId, $devId, $devDetails['deviceType'], $devDetails['browser'], $devDetails['os']]);
+            return $newRowId;
+        } catch (Exception $e2) {
+            return null;
+        }
+    }
+}
+
+function updateDeviceActivity($deviceRowId, $devDetails = null) {
+    $db = getDB();
+    if ($devDetails === null) {
+        $devDetails = getDeviceDetails();
+    }
+    try {
+        $db->prepare("UPDATE Device SET lastActiveAt = NOW(), ip = ?, deviceName = COALESCE(NULLIF(?, ''), deviceName), browser = ?, os = ? WHERE id = ?")
+           ->execute([$devDetails['ip'], $devDetails['deviceName'], $devDetails['browser'], $devDetails['os'], $deviceRowId]);
+    } catch (Exception $e) {
+        try {
+            $db->prepare("UPDATE Device SET lastActiveAt = NOW() WHERE id = ?")->execute([$deviceRowId]);
+        } catch (Exception $e2) {}
+    }
+}
+
+function checkStudentDeviceAccess($userId, $devDetails = null, &$errorMsg = '') {
+    $db = getDB();
+    ensureDeviceColumnsExist($db);
+    if ($devDetails === null) {
+        $devDetails = getDeviceDetails();
+    }
+
+    $uStmt = $db->prepare("SELECT maxDevices, role FROM User WHERE id = ? LIMIT 1");
+    $uStmt->execute([$userId]);
+    $u = $uStmt->fetch();
+
+    if (!$u || strtoupper($u['role'] ?? '') !== 'STUDENT') {
+        return true;
+    }
+
+    $maxDevices = max(1, (int)($u['maxDevices'] ?? 1));
+    $stmtDevs = $db->prepare("SELECT * FROM Device WHERE userId = ? ORDER BY lastActiveAt DESC");
+    $stmtDevs->execute([$userId]);
+    $allDevs = $stmtDevs->fetchAll();
+
+    $devId = $devDetails['identifier'];
+
+    // 1. Check if device is already registered for this student
+    foreach ($allDevs as $d) {
+        if ($d['identifier'] === $devId) {
+            updateDeviceActivity($d['id'], $devDetails);
+            return true;
+        }
+    }
+
+    // 2. Can we bind this device as a new registered device?
+    if (count($allDevs) < $maxDevices) {
+        bindUserDevice($userId, $devDetails);
+        return true;
+    }
+
+    // 3. Exceeded allowed devices: reject login
+    $errorMsg = 'لقد تجاوزت الحد الأقصى للأجهزة المسموح بها (' . $maxDevices . ' جهاز فقط). الحساب مقيد للعمل على جهازك المسجل فقط. إذا قمت بتغيير جهازك يرجى التواصل مع الدعم الفني أو المدرس لفك الربط: 01092037257';
+    return false;
+}
+
 function getCurrentUser() {
     $db = getDB();
 
@@ -101,14 +347,21 @@ function getCurrentUser() {
             $uStmt = $db->prepare("SELECT * FROM User WHERE id = ? LIMIT 1");
             $uStmt->execute([$cUserId]);
             $candidate = $uStmt->fetch();
-            if ($candidate && $candidate['status'] !== 'BANNED') {
+            if ($candidate && $candidate['status'] !== 'BANNED' && $candidate['status'] !== 'PENDING') {
                 $secretKey = 'MohamedYousef_SecretAuthKey_2026';
                 $expectedHash = hash_hmac('sha256', $candidate['id'] . $candidate['password'], $secretKey);
                 if (hash_equals($expectedHash, $cHash)) {
-                    $_SESSION['user_id'] = $candidate['id'];
-                    $_SESSION['user_phone'] = $candidate['phone'];
-                    $_SESSION['user_role'] = $candidate['role'];
-                    $_SESSION['user_name'] = $candidate['fullName'] ?? $candidate['firstName'];
+                    $devDetails = getDeviceDetails();
+                    $devErr = '';
+                    if (checkStudentDeviceAccess($candidate['id'], $devDetails, $devErr)) {
+                        $_SESSION['user_id'] = $candidate['id'];
+                        $_SESSION['user_phone'] = $candidate['phone'];
+                        $_SESSION['user_role'] = $candidate['role'];
+                        $_SESSION['user_name'] = $candidate['fullName'] ?? $candidate['firstName'];
+                    } else {
+                        clearRememberToken();
+                        return null;
+                    }
                 }
             }
         }
@@ -129,53 +382,12 @@ function getCurrentUser() {
 
     // Strict single-device check for students
     if (strtoupper($user['role'] ?? '') === 'STUDENT') {
-        $devId = getDeviceIdentifier();
-        // Check if student has any devices bound
-        $stmtDevs = $db->prepare("SELECT id, identifier FROM Device WHERE userId = ?");
-        $stmtDevs->execute([$user['id']]);
-        $devs = $stmtDevs->fetchAll();
-
-        if (count($devs) > 0) {
-            $isAuthorized = false;
-            foreach ($devs as $d) {
-                if ($d['identifier'] === $devId) {
-                    $isAuthorized = true;
-                    // Update activity time
-                    try {
-                        $db->prepare("UPDATE Device SET lastActiveAt = NOW() WHERE id = ?")->execute([$d['id']]);
-                    } catch (Exception $e) {}
-                    break;
-                }
-            }
-            if (!$isAuthorized) {
-                // Device not authorized or was unbound by Admin! Log out.
-                unset($_SESSION['user_id']);
-                clearRememberToken();
-                return null;
-            }
-        } else {
-            // Student has NO bound devices (e.g. after Admin reset / unbind).
-            // AUTOMATICALLY BIND THIS FIRST ACTIVE DEVICE AS THE SINGLE AUTHORIZED DEVICE!
-            $newDevId = generateId(5);
-            $ua = $_SERVER['HTTP_USER_AGENT'] ?? '';
-            $os = 'Unknown OS';
-            if (strpos($ua, 'Windows') !== false) $os = 'Windows';
-            elseif (strpos($ua, 'Android') !== false) $os = 'Android';
-            elseif (strpos($ua, 'iPhone') !== false || strpos($ua, 'iPad') !== false) $os = 'iOS';
-            elseif (strpos($ua, 'Mac') !== false) $os = 'macOS';
-
-            $browser = 'Unknown Browser';
-            if (strpos($ua, 'Chrome') !== false) $browser = 'Chrome';
-            elseif (strpos($ua, 'Safari') !== false) $browser = 'Safari';
-            elseif (strpos($ua, 'Firefox') !== false) $browser = 'Firefox';
-            elseif (strpos($ua, 'Edge') !== false) $browser = 'Edge';
-
-            $devType = (strpos($ua, 'Mobile') !== false || strpos($ua, 'Android') !== false || strpos($ua, 'iPhone') !== false) ? 'phone' : 'pc';
-
-            try {
-                $insDev = $db->prepare("INSERT INTO Device (id, userId, identifier, deviceType, browser, os, createdAt, lastActiveAt) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW()) ON DUPLICATE KEY UPDATE userId = VALUES(userId), lastActiveAt = NOW()");
-                $insDev->execute([$newDevId, $user['id'], $devId, $devType, $browser, $os]);
-            } catch (Exception $e) {}
+        $devDetails = getDeviceDetails();
+        $devErr = '';
+        if (!checkStudentDeviceAccess($user['id'], $devDetails, $devErr)) {
+            unset($_SESSION['user_id']);
+            clearRememberToken();
+            return null;
         }
     }
 
@@ -374,28 +586,6 @@ function getCachedYears($db = null) {
 function getSetting($key, $default = null) {
     $s = getSettings();
     return array_key_exists($key, $s) ? $s[$key] : $default;
-}
-
-function getDeviceIdentifier() {
-    $ua = $_SERVER['HTTP_USER_AGENT'] ?? 'unknown';
-    $cookieName = 'my_device_uuid';
-    if (!empty($_COOKIE[$cookieName]) && preg_match('/^[a-f0-9]{32,64}$/i', $_COOKIE[$cookieName])) {
-        $devUuid = $_COOKIE[$cookieName];
-    } else {
-        $devUuid = bin2hex(random_bytes(16));
-        if (!headers_sent()) {
-            $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443);
-            setcookie($cookieName, $devUuid, [
-                'expires' => time() + 31536000,
-                'path' => '/',
-                'httponly' => true,
-                'secure' => $isHttps,
-                'samesite' => 'Lax'
-            ]);
-        }
-        $_COOKIE[$cookieName] = $devUuid;
-    }
-    return hash('sha256', $devUuid . '_' . $ua);
 }
 
 function normalizePhone($phone) {

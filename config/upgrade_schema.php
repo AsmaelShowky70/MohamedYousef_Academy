@@ -56,6 +56,27 @@ try {
     echo "[!] Error adding points to Question: " . $e->getMessage() . "\n";
 }
 
+// 1.8 Add ip and deviceName columns to Device table
+try {
+    $devCols = $db->query("SHOW COLUMNS FROM Device LIKE 'ip'")->fetchAll();
+    if (empty($devCols)) {
+        $db->exec("ALTER TABLE Device ADD COLUMN ip VARCHAR(45) NULL DEFAULT NULL AFTER os");
+        echo "[✓] Column ip added to Device table.\n";
+    } else {
+        echo "[i] Column ip already exists in Device table.\n";
+    }
+
+    $devCols2 = $db->query("SHOW COLUMNS FROM Device LIKE 'deviceName'")->fetchAll();
+    if (empty($devCols2)) {
+        $db->exec("ALTER TABLE Device ADD COLUMN deviceName VARCHAR(150) NULL DEFAULT NULL AFTER os");
+        echo "[✓] Column deviceName added to Device table.\n";
+    } else {
+        echo "[i] Column deviceName already exists in Device table.\n";
+    }
+} catch (Exception $e) {
+    echo "[!] Error adding columns to Device: " . $e->getMessage() . "\n";
+}
+
 // 2. Ensure default sections exist for all academic years
 try {
     $years = $db->query("SELECT id, name FROM Year")->fetchAll();
