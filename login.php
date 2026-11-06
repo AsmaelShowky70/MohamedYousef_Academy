@@ -13,6 +13,13 @@ if ($currentUser) {
 }
 
 $error = '';
+$redirect = trim($_GET['redirect'] ?? ($_POST['redirect'] ?? ''));
+
+if (empty($error) && !empty($_SESSION['device_lock_error'])) {
+    $error = $_SESSION['device_lock_error'];
+    unset($_SESSION['device_lock_error']);
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $rawPhone = $_POST['phone'] ?? '';
     $phone = normalizePhone($rawPhone);
@@ -49,7 +56,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $_SESSION['user_name'] = $user['fullName'] ?? $user['firstName'];
                     setRememberToken($user['id'], $user['password']);
 
-                    if (in_array($user['role'], ['ADMIN', 'SUPERADMIN'])) {
+                    if (!empty($redirect) && str_starts_with($redirect, '/') && !str_starts_with($redirect, '//')) {
+                        header('Location: ' . $redirect);
+                    } elseif (in_array($user['role'], ['ADMIN', 'SUPERADMIN'])) {
                         header('Location: /admin/index.php');
                     } else {
                         header('Location: /index.php');
@@ -160,6 +169,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </div>
 <?php endif; ?>
 <form method="POST" action="/login.php" class=" w-full space-y-6">
+<input type="hidden" name="redirect" value="<?= htmlspecialchars($redirect) ?>"/>
 <input type="hidden" name="device_uuid" id="login_device_uuid" value=""/>
 <input type="hidden" name="device_name" id="login_device_name" value=""/>
 <input type="text" placeholder="رقم الهاتف" class="placeholder:text-PTextColor/60 w-full rounded-md border  border-slate-400 bg-transparent  px-4  py-4  outline-none transition duration-300 ease-in-out focus:ring-2 focus:ring-PPrimaryColor focus:ring-opacity-50" required="" name="phone"/><div class="relative "><input type="password" placeholder="كلمة المرور" class="placeholder:text-PTextColor/60 w-full rounded-md border border-slate-400  bg-transparent  px-4 py-4  outline-none transition duration-300 ease-in-out focus:ring-2 focus:ring-PPrimaryColor focus:ring-opacity-50" required="" name="password"/><div class="absolute inset-y-0 left-0 flex cursor-pointer items-center pl-3"><svg width="35px" height="35px" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg"><path clip-rule="evenodd" d="M17.7469 15.4149C17.9855 14.8742 18.1188 14.2724 18.1188 14.0016C18.1188 11.6544 16.2952 9.7513 14.046 9.7513C11.7969 9.7513 9.97332 11.6544 9.97332 14.0016C9.97332 16.3487 12.0097 17.8886 14.046 17.8886C15.3486 17.8886 16.508 17.2515 17.2517 16.2595C17.4466 16.0001 17.6137 15.7168 17.7469 15.4149ZM14.046 15.7635C14.5551 15.7635 15.0205 15.5684 15.3784 15.2457C15.81 14.8566 16 14.2807 16 14.0016C16 12.828 15.1716 11.8764 14.046 11.8764C12.9205 11.8764 12 12.8264 12 14C12 14.8104 12.9205 15.7635 14.046 15.7635Z" fill="#000" fill-rule="evenodd"></path><path clip-rule="evenodd" d="M1.09212 14.2724C1.07621 14.2527 1.10803 14.2931 1.09212 14.2724C0.96764 14.1021 0.970773 13.8996 1.09268 13.7273C1.10161 13.7147 1.11071 13.7016 1.11993 13.6882C4.781 8.34319 9.32105 5.5 14.0142 5.5C18.7025 5.5 23.2385 8.33554 26.8956 13.6698C26.965 13.771 27 13.875 27 13.9995C27 14.1301 26.9593 14.2399 26.8863 14.3461C23.2302 19.6702 18.6982 22.5 14.0142 22.5C9.30912 22.5 4.75717 19.6433 1.09212 14.2724ZM3.93909 13.3525C3.6381 13.7267 3.6381 14.2722 3.93908 14.6465C7.07417 18.5443 10.6042 20.3749 14.0142 20.3749C17.4243 20.3749 20.9543 18.5443 24.0894 14.6465C24.3904 14.2722 24.3904 13.7267 24.0894 13.3525C20.9543 9.45475 17.4243 7.62513 14.0142 7.62513C10.6042 7.62513 7.07417 9.45475 3.93909 13.3525Z" fill="#000" fill-rule="evenodd"></path></svg></div></div><input type="submit" class="h rounded-md border border-PPrimaryColor bg-PPrimaryColor px-5 py-2 font-bold  text-white transition duration-300 ease-in-out hover:cursor-pointer hover:bg-white hover:text-PPrimaryColor" value="تسجيل الدخول"/><p class="my-3">ليس لديك حساب؟<a class="mx-2 text-cyan-700" href="register.php">! إنشاء حساب</a></p><div class="mt-4 pt-4 border-t border-slate-200"><a class="flex items-center justify-center gap-2 text-sm font-semibold text-PPrimaryColor hover:underline transition" href="parent.php">الدخول كولي أمر</a></div></form></div></div></div></div><div class="ripple-background absolute bottom-0 max-md:hidden "><div class="circle xxlarge shade1 absolute"></div><div class="circle xlarge shade2"></div><div class="circle large shade3"></div><div class="circle medium shade4"></div><div class="circle small shade5"></div></div></div>

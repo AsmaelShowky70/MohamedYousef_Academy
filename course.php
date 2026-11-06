@@ -61,21 +61,29 @@ $isFullCourseAccess = $isFullCourseEnrolled || $isAdmin;
 // Check single-lesson (Collection) enrollment for current user
 $enrolledCollectionIds = [];
 if ($user) {
-    // A) Direct Collection Enrollment in _CollectionToUser (direct check without fragile joins)
-    $stmtColEnr = $db->prepare("SELECT A FROM _CollectionToUser WHERE B = ?");
-    $stmtColEnr->execute([$user['id']]);
+    // A) Direct Collection Enrollment in _CollectionToUser (trimmed direct check)
+    $stmtColEnr = $db->prepare("SELECT TRIM(A) FROM _CollectionToUser WHERE TRIM(B) = ?");
+    $stmtColEnr->execute([trim($user['id'])]);
     $directCols = $stmtColEnr->fetchAll(PDO::FETCH_COLUMN) ?: [];
 
     // B) Active single-lesson CourseCode
     $stmtColCodes = $db->prepare("
-        SELECT collectionId 
+        SELECT TRIM(collectionId) 
         FROM CourseCode 
-        WHERE userId = ? AND collectionId IS NOT NULL AND collectionId != '' AND (expires IS NULL OR expires > NOW())
+        WHERE TRIM(userId) = ? AND collectionId IS NOT NULL AND collectionId != '' AND (expires IS NULL OR expires > NOW())
     ");
-    $stmtColCodes->execute([$user['id']]);
+    $stmtColCodes->execute([trim($user['id'])]);
     $codeColIds = $stmtColCodes->fetchAll(PDO::FETCH_COLUMN) ?: [];
 
-    $enrolledCollectionIds = array_values(array_unique(array_filter(array_merge($directCols, $codeColIds))));
+    $mergedCols = array_merge($directCols, $codeColIds);
+    $cleanCols = [];
+    foreach ($mergedCols as $mId) {
+        $clean = trim((string)$mId);
+        if ($clean !== '') {
+            $cleanCols[] = $clean;
+        }
+    }
+    $enrolledCollectionIds = array_values(array_unique($cleanCols));
 }
 
 // Fetch Collections
@@ -154,8 +162,15 @@ foreach ($collections as $idx => &$col) {
         $col['quizzes'] = [];
     }
 
-    // Check purchase status
-    $isDirectLessonEnrolled = in_array($col['id'], $enrolledCollectionIds);
+    // Check purchase status (case-insensitive & trimmed comparison)
+    $colId = trim((string)$col['id']);
+    $isDirectLessonEnrolled = false;
+    foreach ($enrolledCollectionIds as $eId) {
+        if (strcasecmp($colId, trim((string)$eId)) === 0) {
+            $isDirectLessonEnrolled = true;
+            break;
+        }
+    }
     $col['isDirectLessonEnrolled'] = $isDirectLessonEnrolled;
     $col['isPurchased'] = $isAdmin || $isFullCourseAccess || $isDirectLessonEnrolled;
 
@@ -1102,8 +1117,52 @@ html.dark .lesson-active-item {
                         </div>
                     </div>
 
+                <?php elseif ($hasSelectedLesson && $activeCollection && !$user): ?>
+                    <!-- 3A. GUEST / UNLOGGED-IN LOCK SCREEN: CLEAR CTA TO LOGIN -->
+                    <div class="course-card p-6 sm:p-10 md:p-14 text-center space-y-6">
+                        <div class="w-20 h-20 rounded-3xl bg-teal-50 dark:bg-teal-950/40 text-primary flex items-center justify-center text-3xl mx-auto shadow-inner border border-teal-200 dark:border-teal-800">
+                            <i class="fa-solid fa-user-lock"></i>
+                        </div>
+                        <div class="space-y-3 max-w-lg mx-auto">
+                            <span class="inline-block px-3.5 py-1 bg-teal-100 text-teal-800 dark:bg-teal-900/40 dark:text-teal-300 text-xs font-black rounded-full mb-1">
+                                🔒 محتوى محمي للطلاب المشتركين
+                            </span>
+                            <h2 class="text-xl md:text-2xl font-black text-[#0d3753] dark:text-white">
+                                حصة: <?= htmlspecialchars($activeCollection['title']) ?>
+                            </h2>
+                            <p class="text-xs md:text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+                                أنت تتصفح المنصة كزائر. لمشاهدة محتويات هذه الحصة (فيديو الشرح، فيديو الحل، المذكرات، والاختبارات)، يرجى تسجيل الدخول بحساب الطالب الذي تم تفعيل الحصة عليه أو الاشتراك في الحصة.
+                            </p>
+                        </div>
+
+                        <div class="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2 w-full max-w-md mx-auto">
+                            <a href="/login.php?redirect=<?= urlencode($_SERVER['REQUEST_URI']) ?>" class="w-full sm:w-auto px-6 py-3.5 bg-primary hover:bg-teal-700 text-white font-black text-xs rounded-2xl shadow-lg transition flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-arrow-right-to-bracket text-sm"></i>
+                                <span>تسجيل الدخول إلى حسابي</span>
+                            </a>
+                            <a href="/register.php" class="w-full sm:w-auto px-5 py-3.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 font-bold text-xs rounded-2xl transition flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-user-plus text-sm"></i>
+                                <span>إنشاء حساب جديد</span>
+                            </a>
+                        </div>
+
+                        <!-- Instant Direct Code Redemption for this Lesson -->
+                        <div class="max-w-md mx-auto bg-slate-50 dark:bg-slate-800/60 p-4 sm:p-5 rounded-3xl border border-slate-200 dark:border-slate-700 space-y-3 shadow-inner">
+                            <label class="block text-xs font-black text-slate-700 dark:text-slate-300 text-right">
+                                <i class="fa-solid fa-key text-gold-custom ml-1"></i> تفعيل كود الحصة مباشرة:
+                            </label>
+                            <div class="flex flex-col sm:flex-row gap-2">
+                                <input type="text" id="directLessonCodeInput" placeholder="أدخل كود الحصة (مثال: HSA-XXXXX)" class="w-full sm:flex-1 px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-xl text-xs font-bold font-mono uppercase text-slate-800 dark:text-white outline-none focus:border-primary text-center sm:text-right min-w-0">
+                                <button type="button" id="directLessonBtn" onclick="redeemDirectLessonCode()" class="w-full sm:w-auto px-5 py-2.5 bg-primary hover:bg-teal-700 text-white font-bold text-xs rounded-xl shadow transition shrink-0 flex items-center justify-center gap-1.5">
+                                    <i class="fa-solid fa-bolt"></i> تفعيل الحصة
+                                </button>
+                            </div>
+                            <div id="directLessonAlert" class="text-xs font-bold p-3 rounded-xl hidden"></div>
+                        </div>
+                    </div>
+
                 <?php elseif ($hasSelectedLesson && $activeCollection && !$activeCollection['isPurchased']): ?>
-                    <!-- 3. UNPURCHASED SINGLE LESSON LOCK SCREEN WITH INLINE CODE REDEEM -->
+                    <!-- 3B. LOGGED IN STUDENT BUT LESSON NOT PURCHASED -->
                     <div class="course-card p-4 sm:p-6 md:p-14 text-center space-y-6">
                         <div class="w-20 h-20 rounded-3xl bg-amber-50 dark:bg-amber-950/40 text-gold-custom flex items-center justify-center text-3xl mx-auto shadow-inner border border-amber-200 dark:border-amber-800">
                             <i class="fa-solid fa-lock"></i>
@@ -1116,7 +1175,7 @@ html.dark .lesson-active-item {
                                 حصة: <?= htmlspecialchars($activeCollection['title']) ?>
                             </h2>
                             <p class="text-xs md:text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-                                هذه الحصة مغلقة وغير مفعلة بحسابك. لفك إغلاق هذه الحصة والحصول على محتوياتها بالكامل (فيديو الشرح، فيديو الحل، ملخص الدرس، والتاسك)، يرجى التواصل مع الدعم الفني لاستلام كود تفعيل الحصة وتفعيله مباشرة أدناه:
+                                هذه الحصة غير مفعلة بحسابك حالياً (مرحباً يا <strong class="text-primary"><?= htmlspecialchars($user['fullName'] ?? ($user['firstName'] ?? 'طالبنا العزيز')) ?></strong>). لفك إغلاق هذه الحصة والحصول على محتوياتها بالكامل (فيديو الشرح، فيديو الحل، ملخص الدرس، والتاسك)، يرجى التواصل مع الدعم الفني لاستلام كود تفعيل الحصة وتفعيله مباشرة أدناه:
                             </p>
                         </div>
 

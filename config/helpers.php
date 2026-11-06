@@ -309,6 +309,11 @@ function checkStudentDeviceAccess($userId, $devDetails = null, &$errorMsg = '') 
         return true;
     }
 
+    // Bypass device restrictions when admin is impersonating for preview
+    if (!empty($_SESSION['admin_impersonator_id'])) {
+        return true;
+    }
+
     $maxDevices = max(1, (int)($u['maxDevices'] ?? 1));
     $stmtDevs = $db->prepare("SELECT * FROM Device WHERE userId = ? ORDER BY lastActiveAt DESC");
     $stmtDevs->execute([$userId]);
@@ -321,6 +326,18 @@ function checkStudentDeviceAccess($userId, $devDetails = null, &$errorMsg = '') 
         if ($d['identifier'] === $devId) {
             updateDeviceActivity($d['id'], $devDetails);
             return true;
+        }
+    }
+
+    // 1.5. Smart Re-Identification for the Same Physical Device:
+    // If student cleared cookies, opened another browser window, or incognito on the same device/network
+    // (matching OS + Browser + IP), update existing device slot rather than falsely locking student out.
+    if (!empty($devDetails['os']) && !empty($devDetails['browser']) && !empty($devDetails['ip'])) {
+        foreach ($allDevs as $d) {
+            if ($d['os'] === $devDetails['os'] && $d['browser'] === $devDetails['browser'] && $d['ip'] === $devDetails['ip']) {
+                $db->prepare("UPDATE Device SET identifier = ?, lastActiveAt = NOW() WHERE id = ?")->execute([$devId, $d['id']]);
+                return true;
+            }
         }
     }
 
@@ -380,6 +397,11 @@ function getCurrentUser() {
         return null;
     }
 
+    // If an admin is impersonating a student for live preview, bypass device checks
+    if (!empty($_SESSION['admin_impersonator_id'])) {
+        return $user;
+    }
+
     // Strict single-device check for students
     if (strtoupper($user['role'] ?? '') === 'STUDENT') {
         $devDetails = getDeviceDetails();
@@ -387,6 +409,7 @@ function getCurrentUser() {
         if (!checkStudentDeviceAccess($user['id'], $devDetails, $devErr)) {
             unset($_SESSION['user_id']);
             clearRememberToken();
+            $_SESSION['device_lock_error'] = $devErr;
             return null;
         }
     }

@@ -282,6 +282,22 @@ $whatsappEnabled = getSetting('whatsappFloatingEnabled', 'true') === 'true';
 </head>
 <body class="flex flex-col min-h-screen overflow-x-hidden w-full max-w-full">
 
+<?php if (!empty($_SESSION['admin_impersonator_id'])): ?>
+<!-- Admin Live Student Preview Bar -->
+<div class="bg-gradient-to-r from-amber-600 via-yellow-600 to-amber-700 text-white text-xs font-black py-2.5 px-4 shadow-lg sticky top-0 z-[60] flex flex-wrap items-center justify-between gap-2 border-b border-amber-300">
+    <div class="flex items-center gap-2">
+        <span class="w-6 h-6 rounded-full bg-white text-amber-700 flex items-center justify-center text-xs font-bold animate-pulse">
+            <i class="fa-solid fa-eye"></i>
+        </span>
+        <span>أنت تتصفح المنصة حالياً كطالب: <strong><?= htmlspecialchars($currentUser['fullName'] ?? ($currentUser['firstName'] ?? 'طالب')) ?></strong> (وضع المعاينة الحية للأدمن)</span>
+    </div>
+    <a href="/admin/stop_impersonate.php" class="px-3 py-1.5 bg-white text-amber-900 hover:bg-amber-100 rounded-xl text-xs font-black shadow transition flex items-center gap-1.5">
+        <i class="fa-solid fa-arrow-right-from-bracket"></i>
+        <span>إنهاء المعاينة والعودة لملف الطالب</span>
+    </a>
+</div>
+<?php endif; ?>
+
 <!-- Top Announcement Bar -->
 <div class="bg-navy-custom text-white text-[11px] sm:text-xs py-1.5 sm:py-2 px-3 sm:px-4 text-center font-medium flex items-center justify-center gap-2 sm:gap-3">
     <span class="truncate"><i class="fa-solid fa-graduation-cap text-gold-custom ml-1"></i> مرحباً بكم في منصة الأستاذ محمد يوسف التعليمية للغة العربية</span>

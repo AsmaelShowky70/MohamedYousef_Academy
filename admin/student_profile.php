@@ -109,6 +109,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
+    if ($action === 'impersonate_student') {
+        $adm = getCurrentUser();
+        if ($adm && in_array($adm['role'], ['ADMIN', 'SUPERADMIN'])) {
+            $_SESSION['admin_impersonator_id'] = $adm['id'];
+            $_SESSION['admin_impersonator_name'] = $adm['fullName'] ?? 'المشرف';
+            $_SESSION['user_id'] = $studentId;
+            $_SESSION['user_phone'] = $student['phone'];
+            $_SESSION['user_role'] = 'STUDENT';
+            $_SESSION['user_name'] = $student['fullName'] ?? $student['firstName'];
+
+            $targetCourseId = trim($_POST['target_course_id'] ?? '');
+            $targetColId = trim($_POST['target_col_id'] ?? '');
+            $targetVideoId = trim($_POST['target_video_id'] ?? '');
+
+            if ($targetCourseId && $targetVideoId) {
+                header("Location: /course.php?id=" . urlencode($targetCourseId) . "&v=" . urlencode($targetVideoId));
+            } elseif ($targetCourseId && $targetColId) {
+                header("Location: /course.php?id=" . urlencode($targetCourseId) . "&col=" . urlencode($targetColId));
+            } elseif ($targetCourseId) {
+                header("Location: /course.php?id=" . urlencode($targetCourseId));
+            } else {
+                header("Location: /profile.php");
+            }
+            exit;
+        }
+    }
+
     if ($action === 'enroll_course') {
         $courseId = trim($_POST['courseId'] ?? '');
         if ($courseId) {
@@ -408,10 +435,17 @@ $years = $db->query("SELECT id, name FROM Year ORDER BY `order` ASC")->fetchAll(
             <p class="text-xs text-slate-500 font-medium mt-1">متابعة دقيقة للأداء، المشاهدات، الامتحانات، وإدارة الأجهزة والاشتراكات المباشرة</p>
         </div>
     </div>
-    <div class="flex items-center gap-2">
-        <button onclick="window.print()" class="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-800 hover:bg-black text-white font-bold text-xs rounded-xl shadow transition cursor-pointer">
+    <div class="flex flex-wrap items-center gap-2">
+        <form method="POST" action="/admin/student_profile.php?id=<?= urlencode($studentId) ?>" target="_blank" class="inline">
+            <input type="hidden" name="action" value="impersonate_student">
+            <button type="submit" class="inline-flex items-center gap-1.5 px-4 py-2.5 bg-[#0f766e] hover:bg-teal-700 text-white font-black text-xs rounded-xl shadow transition cursor-pointer" title="معاينة حساب الطالب مباشرة في نافذة جديدة">
+                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                <span>معاينة المنصة كطالب ↗</span>
+            </button>
+        </form>
+        <button onclick="window.print()" class="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-800 hover:bg-black text-white font-bold text-xs rounded-xl shadow transition cursor-pointer">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
-            <span>طباعة التقرير / حفظ PDF</span>
+            <span>طباعة التقرير / PDF</span>
         </button>
         <form method="POST" onsubmit="return confirm('هل تريد تغيير حالة حظر هذا الطالب؟')">
             <input type="hidden" name="action" value="toggle_ban">
@@ -608,6 +642,12 @@ $years = $db->query("SELECT id, name FROM Year ORDER BY `order` ASC")->fetchAll(
             </div>
 
             <?php if (!empty($devices)): ?>
+                <?php if (count($devices) >= (int)($student['maxDevices'] ?? 1)): ?>
+                    <div class="mb-3 p-2.5 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-[11px] font-bold flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="text-amber-600 shrink-0"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                        <span>تم الوصول للحد الأقصى للأجهزة. إذا قام الطالب بتغيير متصفحه أو جهازه، اضغط [فك ربط الكل] بالأعلى.</span>
+                    </div>
+                <?php endif; ?>
                 <div class="space-y-3">
                     <?php foreach ($devices as $dev): 
                         $dType = strtolower($dev['deviceType'] ?? 'pc');
@@ -769,17 +809,28 @@ $years = $db->query("SELECT id, name FROM Year ORDER BY `order` ASC")->fetchAll(
                     <?php if (!empty($enrolledCollections)): ?>
                         <div class="space-y-2 max-h-48 overflow-y-auto">
                             <?php foreach ($enrolledCollections as $ecl): ?>
-                                <div class="p-2.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-xs font-bold">
-                                    <div>
-                                        <span class="text-slate-800"><?= htmlspecialchars($ecl['title']) ?></span>
-                                        <span class="text-[10px] text-slate-400 block"><?= htmlspecialchars($ecl['courseTitle'] ?? '') ?></span>
+                                <div class="p-2.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-xs font-bold gap-2">
+                                    <div class="min-w-0">
+                                        <span class="text-slate-800 truncate block"><?= htmlspecialchars($ecl['title']) ?></span>
+                                        <span class="text-[10px] text-slate-400 block truncate"><?= htmlspecialchars($ecl['courseTitle'] ?? '') ?></span>
                                     </div>
-                                    <form method="POST" action="/admin/student_profile.php?id=<?= urlencode($studentId) ?>" onsubmit="return confirm('إلغاء اشتراك الطالب في هذه الحصة؟')">
-                                        <input type="hidden" name="action" value="unenroll_collection">
-                                        <input type="hidden" name="student_id" value="<?= htmlspecialchars($studentId) ?>">
-                                        <input type="hidden" name="collectionId" value="<?= htmlspecialchars($ecl['id']) ?>">
-                                        <button type="submit" class="text-red-600 hover:text-red-800 text-[11px] font-bold underline cursor-pointer">إلغاء</button>
-                                    </form>
+                                    <div class="flex items-center gap-2 shrink-0">
+                                        <form method="POST" action="/admin/student_profile.php?id=<?= urlencode($studentId) ?>" target="_blank" class="inline">
+                                            <input type="hidden" name="action" value="impersonate_student">
+                                            <input type="hidden" name="target_course_id" value="<?= htmlspecialchars($ecl['courseId'] ?? '') ?>">
+                                            <input type="hidden" name="target_col_id" value="<?= htmlspecialchars($ecl['id']) ?>">
+                                            <button type="submit" class="px-2 py-0.5 bg-teal-50 hover:bg-teal-100 text-[#0f766e] border border-teal-200 rounded-lg text-[10px] font-black cursor-pointer flex items-center gap-1" title="معاينة هذه الحصة مباشرة كطالب">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                                                <span>معاينة كطالب ↗</span>
+                                            </button>
+                                        </form>
+                                        <form method="POST" action="/admin/student_profile.php?id=<?= urlencode($studentId) ?>" onsubmit="return confirm('إلغاء اشتراك الطالب في هذه الحصة؟')">
+                                            <input type="hidden" name="action" value="unenroll_collection">
+                                            <input type="hidden" name="student_id" value="<?= htmlspecialchars($studentId) ?>">
+                                            <input type="hidden" name="collectionId" value="<?= htmlspecialchars($ecl['id']) ?>">
+                                            <button type="submit" class="text-red-600 hover:text-red-800 text-[11px] font-bold underline cursor-pointer">إلغاء</button>
+                                        </form>
+                                    </div>
                                 </div>
                             <?php endforeach; ?>
                         </div>
