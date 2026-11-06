@@ -27,3 +27,4 @@ if (!empty($_SESSION['admin_impersonator_id'])) {
 
 header("Location: /admin/index.php");
 exit;
+
