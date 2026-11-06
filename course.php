@@ -61,25 +61,21 @@ $isFullCourseAccess = $isFullCourseEnrolled || $isAdmin;
 // Check single-lesson (Collection) enrollment for current user
 $enrolledCollectionIds = [];
 if ($user) {
-    // A) Direct Collection Enrollment in _CollectionToUser
-    $stmtColEnr = $db->prepare("
-        SELECT clu.A 
-        FROM _CollectionToUser clu 
-        JOIN Collection cl ON clu.A = cl.id 
-        WHERE clu.B = ? AND cl.courseId = ?
-    ");
-    $stmtColEnr->execute([$user['id'], $courseId]);
-    $enrolledCollectionIds = $stmtColEnr->fetchAll(PDO::FETCH_COLUMN);
+    // A) Direct Collection Enrollment in _CollectionToUser (direct check without fragile joins)
+    $stmtColEnr = $db->prepare("SELECT A FROM _CollectionToUser WHERE B = ?");
+    $stmtColEnr->execute([$user['id']]);
+    $directCols = $stmtColEnr->fetchAll(PDO::FETCH_COLUMN) ?: [];
 
     // B) Active single-lesson CourseCode
     $stmtColCodes = $db->prepare("
         SELECT collectionId 
         FROM CourseCode 
-        WHERE userId = ? AND courseId = ? AND collectionId IS NOT NULL AND expires > NOW()
+        WHERE userId = ? AND collectionId IS NOT NULL AND collectionId != '' AND (expires IS NULL OR expires > NOW())
     ");
-    $stmtColCodes->execute([$user['id'], $courseId]);
-    $codeColIds = $stmtColCodes->fetchAll(PDO::FETCH_COLUMN);
-    $enrolledCollectionIds = array_unique(array_merge($enrolledCollectionIds, $codeColIds));
+    $stmtColCodes->execute([$user['id']]);
+    $codeColIds = $stmtColCodes->fetchAll(PDO::FETCH_COLUMN) ?: [];
+
+    $enrolledCollectionIds = array_values(array_unique(array_filter(array_merge($directCols, $codeColIds))));
 }
 
 // Fetch Collections
@@ -160,17 +156,22 @@ foreach ($collections as $idx => &$col) {
 
     // Check purchase status
     $isDirectLessonEnrolled = in_array($col['id'], $enrolledCollectionIds);
+    $col['isDirectLessonEnrolled'] = $isDirectLessonEnrolled;
     $col['isPurchased'] = $isAdmin || $isFullCourseAccess || $isDirectLessonEnrolled;
 
-    // Check Prerequisite Lock: Student cannot access collection $idx if previous collection ($idx - 1)
-    // has unwatched explanation video, unwatched solution video, or unpassed quiz/task!
-    // NOTE: Direct lesson enrollments (purchased single lesson or teacher direct unlock) are NEVER locked by prior lessons!
+    // Prerequisite Sequential Lock Policy:
+    // When can a lesson be locked by previous lessons?
+    // 1. Admin is NEVER locked.
+    // 2. If sequentialLessonsEnabled is false, NEVER locked.
+    // 3. Direct lesson enrollments (purchased single lesson or teacher unlocked lesson) are NEVER locked!
+    // 4. Students who do NOT have full course access (they only buy single lessons) are NEVER locked by prerequisites!
+    // 5. Sequential lock ONLY applies to full-course subscribers on lessons they didn't directly buy individually!
     $col['isPrerequisiteLocked'] = false;
     $col['prerequisiteInfo'] = null;
 
     $sequentialLessonsEnabled = getSetting('enableSequentialLessons', 'true') !== 'false';
 
-    if (!$isAdmin && $sequentialLessonsEnabled && !$isDirectLessonEnrolled && $idx > 0) {
+    if (!$isAdmin && $sequentialLessonsEnabled && $isFullCourseAccess && !$isDirectLessonEnrolled && $idx > 0) {
         $prevCol = $collections[$idx - 1];
 
         // Previous collection can only lock the student if the student actually owns/purchased that previous collection
@@ -284,7 +285,7 @@ if ($activeVideoId) {
 // Can access active video / lesson
 $canAccessActiveLesson = $activeCollection && $activeCollection['isUnlocked'];
 $canAccessActiveVideo = $canAccessActiveLesson && $activeVideo;
-$canAccess = $isFullCourseAccess;
+$canAccess = $isFullCourseAccess || ($activeCollection && !empty($activeCollection['isUnlocked']));
 
 // Next and Previous videos in the active collection or overall
 $prevVideo = ($activeVideoIndex > 0) ? $allVideos[$activeVideoIndex - 1] : null;

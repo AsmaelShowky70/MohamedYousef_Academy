@@ -72,7 +72,7 @@ if (!$hasAccess) {
         }
 
         if (!$hasAccess) {
-            $stmtColCode = $db->prepare("SELECT 1 FROM CourseCode WHERE userId = ? AND collectionId = ? AND expires > NOW() LIMIT 1");
+            $stmtColCode = $db->prepare("SELECT 1 FROM CourseCode WHERE userId = ? AND collectionId = ? AND (expires IS NULL OR expires > NOW()) LIMIT 1");
             $stmtColCode->execute([$user['id'], $video['collectionId']]);
             if ($stmtColCode->fetch()) {
                 $hasAccess = true;

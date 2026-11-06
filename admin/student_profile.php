@@ -210,6 +210,13 @@ $enrolledCourseIds = array_column($enrolledCourses, 'id');
 // All Courses (for enrollment dropdown)
 $allCourses = $db->query("SELECT c.id, c.title, y.name AS yearName FROM Course c LEFT JOIN Section s ON c.sectionId = s.id LEFT JOIN Year y ON s.yearId = y.id ORDER BY y.name ASC, c.title ASC")->fetchAll();
 
+// Group courses by Year for grouped dropdowns
+$coursesByYear = [];
+foreach ($allCourses as $c) {
+    $yName = $c['yearName'] ?: 'عام / كورسات أخرى';
+    $coursesByYear[$yName][] = $c;
+}
+
 // 3. Fetch Enrolled Collections (Lessons)
 $stmtEnrolledColls = $db->prepare("
     SELECT cl.*, c.title AS courseTitle 
@@ -223,8 +230,22 @@ $stmtEnrolledColls->execute([$studentId]);
 $enrolledCollections = $stmtEnrolledColls->fetchAll();
 $enrolledCollectionIds = array_column($enrolledCollections, 'id');
 
-// All Collections (for lesson dropdown)
-$allCollections = $db->query("SELECT cl.id, cl.title, cl.price, cl.courseId, c.title AS courseTitle FROM Collection cl LEFT JOIN Course c ON cl.courseId = c.id ORDER BY c.title ASC, cl.order ASC")->fetchAll();
+// All Collections (strictly indexed by Course ID for dynamic instant filtering)
+$allCollections = $db->query("SELECT cl.id, cl.title, cl.price, cl.courseId, c.title AS courseTitle FROM Collection cl LEFT JOIN Course c ON cl.courseId = c.id ORDER BY c.title ASC, cl.order ASC, cl.id ASC")->fetchAll();
+
+$collectionsByCourse = [];
+foreach ($allCollections as $acl) {
+    $cId = (string)($acl['courseId'] ?? '');
+    if ($cId !== '') {
+        $priceText = ($acl['price'] !== null && (float)$acl['price'] > 0) ? number_format((float)$acl['price'], 2) . ' ج.م' : 'مجاني';
+        $collectionsByCourse[$cId][] = [
+            'id' => $acl['id'],
+            'title' => $acl['title'],
+            'price' => $priceText,
+            'order' => (int)($acl['order'] ?? 0)
+        ];
+    }
+}
 
 // 4. Video Watch Analytics (#15)
 // Find all accessible videos (from enrolled courses OR enrolled collections)
@@ -652,16 +673,23 @@ $years = $db->query("SELECT id, name FROM Year ORDER BY `order` ASC")->fetchAll(
                     <input type="hidden" name="action" value="enroll_course">
                     <input type="hidden" name="student_id" value="<?= htmlspecialchars($studentId) ?>">
                     <div>
-                        <label class="block text-xs font-bold text-teal-900 mb-1.5">إضافة كورس كامل مباشرة:</label>
-                        <select name="courseId" id="enrollCourseSelect" onchange="syncCourseFilter(this.value)" required class="w-full px-3 py-2 text-xs font-bold bg-white border border-teal-200 rounded-xl focus:border-[#0f766e] outline-none mb-3">
-                            <option value="">-- اختر الكورس المطلوب --</option>
-                            <?php foreach ($allCourses as $ac): ?>
-                                <option value="<?= htmlspecialchars($ac['id']) ?>"><?= htmlspecialchars($ac['title']) ?> (<?= htmlspecialchars($ac['yearName'] ?: 'عام') ?>)</option>
+                        <label class="block text-xs font-bold text-teal-900 mb-1.5 flex items-center gap-1.5">
+                            <i class="fa-solid fa-graduation-cap text-[#0f766e]"></i>
+                            <span>إضافة كورس كامل مباشرة:</span>
+                        </label>
+                        <select name="courseId" id="enrollCourseSelect" required class="w-full px-3 py-2 text-xs font-bold bg-white border border-teal-200 rounded-xl focus:border-[#0f766e] outline-none mb-3">
+                            <option value="">-- اختر الكورس المطلوب لتفعيله بالكامل --</option>
+                            <?php foreach ($coursesByYear as $yearName => $cList): ?>
+                                <optgroup label="الصف: <?= htmlspecialchars($yearName) ?>">
+                                    <?php foreach ($cList as $ac): ?>
+                                        <option value="<?= htmlspecialchars($ac['id']) ?>"><?= htmlspecialchars($ac['title']) ?> (<?= htmlspecialchars($yearName) ?>)</option>
+                                    <?php endforeach; ?>
+                                </optgroup>
                             <?php endforeach; ?>
                         </select>
                     </div>
-                    <button type="submit" class="w-full py-2 bg-[#0f766e] hover:bg-[#0d3753] text-white font-bold text-xs rounded-xl shadow transition cursor-pointer">
-                        + تفعيل الكورس للطالب
+                    <button type="submit" class="w-full py-2 bg-[#0f766e] hover:bg-[#0d3753] text-white font-bold text-xs rounded-xl shadow transition cursor-pointer flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-plus"></i> تفعيل الكورس كاملاً للطالب
                     </button>
                 </form>
 
@@ -670,38 +698,45 @@ $years = $db->query("SELECT id, name FROM Year ORDER BY `order` ASC")->fetchAll(
                     <input type="hidden" name="action" value="enroll_collection">
                     <input type="hidden" name="student_id" value="<?= htmlspecialchars($studentId) ?>">
                     <div class="space-y-3">
-                        <label class="block text-xs font-bold text-amber-900">إضافة حصة / درس منفرد مباشرة:</label>
+                        <label class="block text-xs font-bold text-amber-900 flex items-center gap-1.5">
+                            <i class="fa-solid fa-bullseye text-amber-600"></i>
+                            <span>إضافة حصة / درس منفرد مباشرة:</span>
+                        </label>
                         
-                        <!-- 1. Filter by Course -->
+                        <!-- 1. Select Course First to filter lessons -->
                         <div>
-                            <span class="block text-[11px] font-bold text-slate-700 mb-1 flex items-center gap-1">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="text-amber-600"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
-                                <span>1. اختر الكورس أولاً لتصفية حصصه:</span>
+                            <span class="block text-[11px] font-bold text-slate-700 mb-1 flex items-center justify-between">
+                                <span class="flex items-center gap-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="text-amber-600"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+                                    <span>1. اختر الكورس أولاً:</span>
+                                </span>
+                                <span class="text-[10px] text-amber-700 font-bold">لتصفية حصصه فقط</span>
                             </span>
-                            <select id="filterCourseSelect" onchange="filterLessonsByCourse(this.value)" class="w-full px-3 py-2 text-xs font-bold bg-white border border-amber-300 rounded-xl focus:border-amber-600 outline-none">
-                                <option value="">-- اختر الكورس المطلوب لعرض حصصه فقط --</option>
-                                <?php foreach ($allCourses as $ac): ?>
-                                    <option value="<?= htmlspecialchars($ac['id']) ?>"><?= htmlspecialchars($ac['title']) ?> (<?= htmlspecialchars($ac['yearName'] ?: 'عام') ?>)</option>
+                            <select id="filterCourseSelect" onchange="onProfileCourseChange(this.value)" class="w-full px-3 py-2 text-xs font-bold bg-white border border-amber-300 rounded-xl focus:border-amber-600 outline-none">
+                                <option value="">-- اختر الكورس لعرض حصصه التابعة له فقط --</option>
+                                <?php foreach ($coursesByYear as $yearName => $cList): ?>
+                                    <optgroup label="الصف: <?= htmlspecialchars($yearName) ?>">
+                                        <?php foreach ($cList as $ac): ?>
+                                            <option value="<?= htmlspecialchars($ac['id']) ?>"><?= htmlspecialchars($ac['title']) ?> (<?= htmlspecialchars($yearName) ?>)</option>
+                                        <?php endforeach; ?>
+                                    </optgroup>
                                 <?php endforeach; ?>
                             </select>
                         </div>
 
-                        <!-- 2. Select Specific Lesson -->
+                        <!-- 2. Select Specific Lesson (strictly populated by selected course) -->
                         <div>
                             <span class="block text-[11px] font-bold text-slate-700 mb-1 flex items-center justify-between">
-                                <span>2. اختر الحصة / الدرس:</span>
+                                <span>2. اختر الحصة / الدرس المحدد:</span>
                                 <span id="lessonsCounter" class="text-[10px] text-amber-800 font-bold"></span>
                             </span>
-                            <select name="collectionId" id="lessonCollectionSelect" required class="w-full px-3 py-2 text-xs font-bold bg-white border border-amber-300 rounded-xl focus:border-amber-600 outline-none mb-1">
-                                <option value="">-- يرجى اختيار الكورس أولاً لتظهر حصصه --</option>
-                                <?php foreach ($allCollections as $acl): ?>
-                                    <option value="<?= htmlspecialchars($acl['id']) ?>" data-course-id="<?= htmlspecialchars($acl['courseId'] ?? '') ?>"><?= htmlspecialchars($acl['title']) ?> (<?= htmlspecialchars($acl['courseTitle'] ?: 'كورس') ?>)</option>
-                                <?php endforeach; ?>
+                            <select name="collectionId" id="lessonCollectionSelect" required disabled class="w-full px-3 py-2 text-xs font-bold bg-slate-100 border border-amber-300 rounded-xl focus:border-amber-600 outline-none mb-1 text-slate-500 cursor-not-allowed">
+                                <option value="">-- يرجى اختيار الكورس أولاً لتظهر حصصه فقط --</option>
                             </select>
                         </div>
                     </div>
-                    <button type="submit" class="w-full mt-3 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl shadow transition cursor-pointer">
-                        + تفعيل الحصة للطالب
+                    <button type="submit" class="w-full mt-3 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl shadow transition cursor-pointer flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-plus"></i> تفعيل الحصة المحددة للطالب
                     </button>
                 </form>
             </div>
@@ -911,66 +946,62 @@ function toggleEditCenterCode(val) {
     }
 }
 
-// Dynamic Course -> Lessons Filter
-let cachedLessonOptions = null;
+// Dynamic Course -> Lessons Instant Filter (Strict JSON lookup: Impossible to show lessons from other courses)
+const COLLECTIONS_BY_COURSE = <?= json_encode($collectionsByCourse, JSON_UNESCAPED_UNICODE) ?>;
 
-function filterLessonsByCourse(courseId) {
+function onProfileCourseChange(courseId) {
     const lessonSelect = document.getElementById('lessonCollectionSelect');
     const counter = document.getElementById('lessonsCounter');
     if (!lessonSelect) return;
 
-    if (!cachedLessonOptions) {
-        cachedLessonOptions = Array.from(lessonSelect.querySelectorAll('option[data-course-id]'));
-    }
-
     lessonSelect.innerHTML = '';
 
-    if (!courseId) {
-        const defaultOpt = document.createElement('option');
-        defaultOpt.value = '';
-        defaultOpt.textContent = '-- يرجى اختيار الكورس أولاً لتظهر حصصه --';
-        lessonSelect.appendChild(defaultOpt);
-        if (counter) counter.textContent = '';
+    if (!courseId || !COLLECTIONS_BY_COURSE[courseId] || COLLECTIONS_BY_COURSE[courseId].length === 0) {
+        lessonSelect.disabled = true;
+        lessonSelect.className = "w-full px-3 py-2 text-xs font-bold bg-slate-100 border border-amber-300 rounded-xl focus:border-amber-600 outline-none mb-1 text-slate-500 cursor-not-allowed";
+        const opt = document.createElement('option');
+        opt.value = '';
+        opt.textContent = courseId ? '-- لا توجد حصص مضافة داخل هذا الكورس بعد --' : '-- يرجى اختيار الكورس أولاً لتظهر حصصه فقط --';
+        lessonSelect.appendChild(opt);
+        if (counter) counter.textContent = courseId ? '(0 حصص)' : '';
         return;
     }
 
-    const placeholder = document.createElement('option');
-    placeholder.value = '';
-    placeholder.textContent = '-- اختر الحصة من هذا الكورس --';
-    lessonSelect.appendChild(placeholder);
+    const lessons = COLLECTIONS_BY_COURSE[courseId];
+    lessonSelect.disabled = false;
+    lessonSelect.className = "w-full px-3 py-2 text-xs font-bold bg-white border border-amber-400 rounded-xl focus:border-amber-600 outline-none mb-1 text-slate-800 cursor-pointer shadow-sm";
 
-    let matchCount = 0;
-    cachedLessonOptions.forEach(opt => {
-        if (opt.getAttribute('data-course-id') === courseId) {
-            lessonSelect.appendChild(opt.cloneNode(true));
-            matchCount++;
-        }
+    const defaultOpt = document.createElement('option');
+    defaultOpt.value = '';
+    defaultOpt.textContent = `-- اختر الحصة (${lessons.length} حصة متوفرة لهذا الكورس) --`;
+    lessonSelect.appendChild(defaultOpt);
+
+    lessons.forEach((l, idx) => {
+        const opt = document.createElement('option');
+        opt.value = l.id;
+        opt.textContent = `${idx + 1}. ${l.title} (${l.price})`;
+        lessonSelect.appendChild(opt);
     });
 
-    if (matchCount === 0) {
-        placeholder.textContent = '-- لا توجد حصص مضافة داخل هذا الكورس بعد --';
-        if (counter) counter.textContent = '(0 حصص)';
-    } else {
-        if (counter) counter.textContent = '(' + matchCount + ' حصة متاحة)';
-    }
+    if (counter) counter.textContent = `(${lessons.length} حصة متاحة)`;
 }
 
-function syncCourseFilter(courseId) {
-    const filter = document.getElementById('filterCourseSelect');
-    if (filter && (!filter.value || filter.value !== courseId)) {
-        filter.value = courseId;
-        filterLessonsByCourse(courseId);
+// Immediate + DOMContentLoaded execution defense
+(function initCourseLessonFilter() {
+    function run() {
+        const filter = document.getElementById('filterCourseSelect');
+        if (filter && filter.value) {
+            onProfileCourseChange(filter.value);
+        } else {
+            onProfileCourseChange('');
+        }
     }
-}
-
-document.addEventListener('DOMContentLoaded', function() {
-    const filter = document.getElementById('filterCourseSelect');
-    if (filter && filter.value) {
-        filterLessonsByCourse(filter.value);
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', run);
     } else {
-        filterLessonsByCourse('');
+        run();
     }
-});
+})();
 </script>
 
 <?php require_once __DIR__ . '/footer.php'; ?>
